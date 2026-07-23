@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Layers,
   Cpu,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -87,11 +88,12 @@ export function OverviewView({
       </Card>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Jobs" value={jobs.length} icon={ListChecks} tone="primary" />
-        <StatCard label="Units annotated" value={totalUnits} icon={Layers} tone="teal" />
+        <StatCard label="Units" value={totalUnits} icon={Layers} tone="teal" />
         <StatCard label="Auto-accepted" value={totalAuto} icon={ShieldCheck} tone="emerald" />
         <StatCard label="Human-routed" value={totalHuman} icon={GitBranch} tone="amber" />
+        <StatCard label="Reviewed" value={totalReviewed} icon={CheckCircle2} tone="violet" />
       </div>
 
       {/* Recent jobs */}
@@ -143,20 +145,23 @@ function StatCard({
   label: string;
   value: number;
   icon: React.ComponentType<{ className?: string }>;
-  tone: "primary" | "teal" | "emerald" | "amber";
+  tone: "primary" | "teal" | "emerald" | "amber" | "violet";
 }) {
   const toneClass = {
     primary: "text-primary",
     teal: "text-teal-400",
     emerald: "text-emerald-400",
     amber: "text-amber-400",
+    violet: "text-violet-400",
   }[tone];
   return (
-    <Card className="border-border/60">
+    <Card className="border-border/60 card-hover animate-fade-in">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">{label}</span>
-          <Icon className={cn("h-4 w-4", toneClass)} />
+          <div className={cn("rounded-md p-1 bg-current/10", toneClass)}>
+            <Icon className={cn("h-3.5 w-3.5", toneClass)} />
+          </div>
         </div>
         <div className="mt-2 text-2xl font-bold tabular-nums">{value}</div>
       </CardContent>

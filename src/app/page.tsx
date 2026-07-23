@@ -10,11 +10,12 @@ import { OverviewView } from "@/components/views/overview-view";
 // Lazy-load heavy views to reduce initial compile memory footprint.
 const JobsView = dynamic(() => import("@/components/views/jobs-view").then((m) => m.JobsView), { ssr: false });
 const PipelineView = dynamic(() => import("@/components/views/pipeline-view").then((m) => m.PipelineView), { ssr: false });
+const UnitsView = dynamic(() => import("@/components/views/units-view").then((m) => m.UnitsView), { ssr: false });
 const ReviewView = dynamic(() => import("@/components/views/review-view").then((m) => m.ReviewView), { ssr: false });
 const QualityView = dynamic(() => import("@/components/views/quality-view").then((m) => m.QualityView), { ssr: false });
 const ExportView = dynamic(() => import("@/components/views/export-view").then((m) => m.ExportView), { ssr: false });
 
-export type ViewKey = "overview" | "jobs" | "pipeline" | "review" | "quality" | "export";
+export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "quality" | "export";
 
 export default function Home() {
   const [view, setView] = useState<ViewKey>("overview");
@@ -92,6 +93,10 @@ export default function Home() {
       )}
       {view === "pipeline" && !activeJob && (
         <EmptyState message="Create or select a job to view the live pipeline." action={() => setView("jobs")} actionLabel="Go to Jobs" />
+      )}
+      {view === "units" && activeJob && <UnitsView job={activeJob} />}
+      {view === "units" && !activeJob && (
+        <EmptyState message="Select a job to view annotated units." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
       {view === "review" && activeJob && <ReviewView job={activeJob} />}
       {view === "review" && !activeJob && (

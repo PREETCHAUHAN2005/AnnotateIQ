@@ -147,6 +147,10 @@
       linear-gradient(to bottom, oklch(1 0 0 / 4%) 1px, transparent 1px);
     background-size: 32px 32px;
   }
+  .bg-grid-fade {
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  }
   .glow-emerald {
     box-shadow: 0 0 0 1px oklch(0.72 0.17 162 / 35%), 0 0 24px oklch(0.72 0.17 162 / 18%);
   }
@@ -157,7 +161,13 @@
     box-shadow: 0 0 0 1px oklch(0.66 0.22 25 / 35%), 0 0 24px oklch(0.66 0.22 25 / 18%);
   }
   .text-gradient-emerald {
-    background: linear-gradient(135deg, oklch(0.78 0.17 162), oklch(0.7 0.13 195));
+    background: linear-gradient(135deg, oklch(0.82 0.17 162), oklch(0.72 0.13 195));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-amber {
+    background: linear-gradient(135deg, oklch(0.85 0.16 85), oklch(0.75 0.18 40));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -169,5 +179,45 @@
     0% { box-shadow: 0 0 0 0 oklch(0.72 0.17 162 / 50%); }
     70% { box-shadow: 0 0 0 12px oklch(0.72 0.17 162 / 0%); }
     100% { box-shadow: 0 0 0 0 oklch(0.72 0.17 162 / 0%); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(1 0 0 / 8%) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .card-hover {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px oklch(0 0 0 / 20%);
+  }
+  .glass {
+    background: oklch(0.205 0.018 250 / 60%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }

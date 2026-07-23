@@ -14,6 +14,7 @@ import {
   RefreshCw,
   GitBranch,
   Sparkles,
+  TableProperties,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -22,6 +23,7 @@ const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "jobs", label: "Jobs & Upload", icon: ListChecks },
   { key: "pipeline", label: "Live Pipeline", icon: Play },
+  { key: "units", label: "Annotated Units", icon: TableProperties },
   { key: "review", label: "Review Queue", icon: GitBranch },
   { key: "quality", label: "Quality", icon: Gauge },
   { key: "export", label: "Export", icon: Download },

@@ -112,5 +112,53 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       difficulty: distDifficulty,
       chapter: distChapter,
     },
+    // per-agent latency stats (attempt 1 only)
+    latency: computeLatency(drafts),
+    // confidence distribution buckets
+    confidenceBuckets: computeConfidenceBuckets(finals),
   });
+}
+
+function computeLatency(drafts: { agent: string; latencyMs: number | null; attempt: number }[]) {
+  const agents = ["taxonomy", "difficulty", "math", "language", "critic"];
+  const out: Record<string, { avg: number; min: number; max: number; count: number; p95: number }> = {};
+  for (const agent of agents) {
+    const lats = drafts
+      .filter((d) => d.agent === agent && d.attempt === 1 && d.latencyMs != null)
+      .map((d) => d.latencyMs as number);
+    if (lats.length === 0) {
+      out[agent] = { avg: 0, min: 0, max: 0, count: 0, p95: 0 };
+      continue;
+    }
+    lats.sort((a, b) => a - b);
+    const sum = lats.reduce((a, b) => a + b, 0);
+    const p95idx = Math.min(lats.length - 1, Math.floor(lats.length * 0.95));
+    out[agent] = {
+      avg: Math.round(sum / lats.length),
+      min: lats[0],
+      max: lats[lats.length - 1],
+      count: lats.length,
+      p95: lats[p95idx],
+    };
+  }
+  return out;
+}
+
+function computeConfidenceBuckets(finals: { confidence: number }[]) {
+  const buckets = [
+    { label: "0.0–0.5", min: 0, max: 0.5, count: 0 },
+    { label: "0.5–0.7", min: 0.5, max: 0.7, count: 0 },
+    { label: "0.7–0.85", min: 0.7, max: 0.85, count: 0 },
+    { label: "0.85–0.95", min: 0.85, max: 0.95, count: 0 },
+    { label: "0.95–1.0", min: 0.95, max: 1.01, count: 0 },
+  ];
+  for (const f of finals) {
+    for (const b of buckets) {
+      if (f.confidence >= b.min && f.confidence < b.max) {
+        b.count++;
+        break;
+      }
+    }
+  }
+  return buckets.map((b) => ({ label: b.label, count: b.count }));
 }

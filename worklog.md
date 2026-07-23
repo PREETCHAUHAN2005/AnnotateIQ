@@ -101,3 +101,41 @@ Stage Summary:
 - 6 frontend views all functional: Overview, Jobs & Upload, Live Pipeline, Review Queue, Quality, Export.
 - Dark theme with emerald/teal/amber accents, sticky footer, responsive sidebar nav.
 - 15-min cron job set up for continuous improvement.
+
+---
+Task ID: 11
+Agent: main (cron review)
+Task: QA testing, bug fixes, new features (Units view, latency metrics, confidence histogram), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. Found bug: Jobs view crashed with "Application error: a client-side exception" when the dev server restarted mid-API-call (OOM kill). No error handling → blank crash screen.
+- Fixed bug: Added ErrorBoundary component (src/components/error-boundary.tsx) that catches client-side exceptions and shows a retry UI instead of a blank crash. Wrapped the app in layout.tsx.
+- Fixed bug: Updated API client (src/lib/api.ts) with automatic retry (3 retries with exponential backoff) on network failures and 5xx errors. Transient server restarts no longer crash the frontend.
+- NEW FEATURE: "Annotated Units" view (src/components/views/units-view.tsx) — a 7th sidebar nav item:
+  - Filterable, sortable table of all annotated units in a job
+  - Search by stem/chapter/concepts, filter by route (auto/human) and difficulty
+  - Sortable columns (#, chapter, difficulty, confidence) with visual sort indicators
+  - Click any row to open a detail dialog with full annotation (stem, options, chapter, concepts, difficulty, bloom, language, LaTeX, rationale, confidence/agreement, review status)
+  - Mini stats bar (total, auto, human, avg confidence)
+  - Difficulty badges with color coding, confidence bars with threshold colors
+- NEW FEATURE: Agent latency panel in Quality dashboard — per-agent avg/p95/min-max response times with visual bars. Backend computes from drafts table (attempt 1 only).
+- NEW FEATURE: Confidence distribution histogram in Quality dashboard — 5 buckets (0-0.5, 0.5-0.7, 0.7-0.85, 0.85-0.95, 0.95-1.0) with color-coded bars (rose=low, amber=medium, emerald=high/auto).
+- Updated QualityStats type + quality API route to include latency + confidenceBuckets.
+- STYLING IMPROVEMENTS:
+  - Added new CSS utilities: animate-fade-in, animate-slide-up, animate-shimmer, card-hover (translateY + shadow on hover), glass (backdrop-blur), bg-grid-fade (radial mask), text-gradient-amber
+  - Overview stat cards: now 5 cards (added Reviewed), card-hover + animate-fade-in, icon badges with bg tint
+  - Quality view: 2 new card sections (Agent latency + Confidence distribution) with rich visualizations
+- ESLint: 0 errors, 3 warnings (unused eslint-disable directives — cosmetic).
+- Verified via agent-browser + VLM:
+  - Overview: 5 stat cards (Jobs, Units, Auto-accepted, Human-routed, Reviewed), clean layout
+  - Annotated Units: table with all columns, search bar, filters, sortable headers — confirmed by VLM
+  - Quality: KPI cards, kappa bars, honeypot scores, Agent latency section, Confidence distribution chart — all visible
+  - Review Queue: queue of 6 units, question + agent drafts panel, annotation form with Accept/Edit/Reject — confirmed by VLM
+
+Stage Summary:
+- Fixed critical crash bug (ErrorBoundary + API retry makes the app resilient to dev server OOM restarts)
+- Added 7th view: "Annotated Units" — a powerful filterable/sortable table with detail dialog
+- Added 2 new Quality dashboard sections: Agent latency metrics + Confidence distribution histogram
+- Enhanced styling: new animations, card hover effects, glassmorphism utilities, gradient text
+- All views verified working via agent-browser + VLM
+- 0 lint errors

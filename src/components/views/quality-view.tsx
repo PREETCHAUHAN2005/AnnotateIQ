@@ -242,6 +242,82 @@ export function QualityView({ job }: { job: Job }) {
         </Card>
       </div>
 
+      {/* Agent latency + confidence distribution */}
+      <div className="grid lg:grid-cols-2 gap-5">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" /> Agent latency
+            </CardTitle>
+            <CardDescription>Per-agent response time (ms) — attempt 1 only</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {stats.latency && Object.entries(stats.latency).map(([agent, l]) => (
+              <div key={agent} className="flex items-center gap-3">
+                <div className="w-20 text-xs font-medium capitalize shrink-0">{agent}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <span>avg <span className="font-mono text-foreground">{l.avg}ms</span></span>
+                    <span>·</span>
+                    <span>p95 <span className="font-mono text-foreground">{l.p95}ms</span></span>
+                    <span>·</span>
+                    <span>n={l.count}</span>
+                  </div>
+                  <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="absolute h-full rounded-full bg-primary/30"
+                      style={{ width: `${Math.min(100, (l.avg / Math.max(l.max, 1)) * 100)}%` }}
+                    />
+                    <div
+                      className="absolute h-full rounded-full bg-primary"
+                      style={{ width: `${Math.min(100, (l.p95 / Math.max(l.max, 1)) * 100)}%`, opacity: 0.6 }}
+                    />
+                  </div>
+                </div>
+                <div className="text-[10px] text-muted-foreground font-mono w-24 text-right shrink-0">
+                  {l.min}–{l.max}ms
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" /> Confidence distribution
+            </CardTitle>
+            <CardDescription>How units spread across confidence buckets</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.confidenceBuckets ?? []} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
+                  <XAxis dataKey="label" tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 10 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{ background: "oklch(0.205 0.018 250)", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
+                    cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {(stats.confidenceBuckets ?? []).map((_, i) => (
+                      <Cell key={i} fill={["#f43f5e", "#f59e0b", "#f59e0b", "#10b981", "#10b981"][i % 5]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" /> low</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" /> medium</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> high (auto)</span>
+              <span className="ml-auto">threshold ≥ 0.85</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Event tally */}
       <Card>
         <CardHeader>

@@ -123,6 +123,8 @@ export type QualityStats = {
     difficulty: Record<string, number>;
     chapter: Record<string, number>;
   };
+  latency: Record<string, { avg: number; min: number; max: number; count: number; p95: number }>;
+  confidenceBuckets: { label: string; count: number }[];
 };
 
 export type PipelineEvent = {

@@ -7,16 +7,39 @@ import type {
   Unit,
 } from "@/lib/types";
 
-async function jfetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status}: ${text}`);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Fetch with automatic retry on network failure (server restarts, OOM kills).
+ * The sandbox dev server gets killed under memory pressure; this makes the
+ * frontend resilient by retrying transient failures instead of crashing.
+ */
+async function jfetch<T>(url: string, init?: RequestInit, retries = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        throw new Error(`${res.status}: ${text}`);
+      }
+      return res.json() as Promise<T>;
+    } catch (e) {
+      lastErr = e;
+      // retry on network errors (Failed to fetch) and 5xx; don't retry on 4xx
+      const isNetwork = e instanceof TypeError;
+      const is5xx = e instanceof Error && /5\d\d:/.test(e.message);
+      if ((isNetwork || is5xx) && attempt < retries) {
+        await sleep(800 * (attempt + 1)); // 0.8s, 1.6s, 2.4s
+        continue;
+      }
+      throw e;
+    }
   }
-  return res.json() as Promise<T>;
+  throw lastErr;
 }
 
 export const api = {
@@ -25,7 +48,7 @@ export const api = {
     jfetch<{ job: Job }>("/api/jobs", { method: "POST", body: JSON.stringify(body) }),
   getJob: (id: string) => jfetch<{ job: Job }>(`/api/jobs/${id}`),
   getUnits: (id: string) => jfetch<{ units: (Unit & { final?: { route: string; confidence: number; agreement: number; reviewerAction: string | null } | null })[] }>(`/api/jobs/${id}/units`),
-  runPipeline: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}/run`, { method: "POST" }),
+  runPipeline: (id: string) => jfetch<{ ok: boolean; job?: Job }>(`/api/jobs/${id}/run`, { method: "POST" }),
   getFinals: (id: string) => jfetch<{ finals: FinalRecord[] }>(`/api/jobs/${id}/finals`),
   getDrafts: (jobId: string, unitId: string) =>
     jfetch<{
