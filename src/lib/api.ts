@@ -1,7 +1,9 @@
 import type {
   Draft,
   FinalRecord,
+  HoneypotResult,
   Job,
+  JobComparison,
   QualityStats,
   ReviewItem,
   Unit,
@@ -63,6 +65,9 @@ export const api = {
   submitReview: (unitId: string, body: { action: "accept" | "edit" | "reject"; editedPayload?: unknown; note?: string; reviewer?: string }) =>
     jfetch<{ ok: boolean }>(`/api/units/${unitId}/review`, { method: "POST", body: JSON.stringify(body) }),
   getQuality: (id: string) => jfetch<QualityStats>(`/api/jobs/${id}/quality`),
+  getHoneypots: (id: string) => jfetch<{ honeypots: HoneypotResult[]; total: number }>(`/api/jobs/${id}/honeypots`),
   exportUrl: (id: string, format: "jsonl" | "json" = "jsonl") => `/api/jobs/${id}/export?format=${format}`,
   compareJobs: () => jfetch<{ jobs: JobComparison[] }>("/api/compare"),
+  deleteJob: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
+  resetJob: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}/reset`, { method: "POST" }),
 };

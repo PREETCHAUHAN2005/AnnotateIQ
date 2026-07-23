@@ -13,10 +13,11 @@ const PipelineView = dynamic(() => import("@/components/views/pipeline-view").th
 const UnitsView = dynamic(() => import("@/components/views/units-view").then((m) => m.UnitsView), { ssr: false });
 const ReviewView = dynamic(() => import("@/components/views/review-view").then((m) => m.ReviewView), { ssr: false });
 const QualityView = dynamic(() => import("@/components/views/quality-view").then((m) => m.QualityView), { ssr: false });
+const HoneypotView = dynamic(() => import("@/components/views/honeypot-view").then((m) => m.HoneypotView), { ssr: false });
 const CompareView = dynamic(() => import("@/components/views/compare-view").then((m) => m.CompareView), { ssr: false });
 const ExportView = dynamic(() => import("@/components/views/export-view").then((m) => m.ExportView), { ssr: false });
 
-export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "quality" | "compare" | "export";
+export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "export";
 
 export default function Home() {
   const [view, setView] = useState<ViewKey>("overview");
@@ -58,6 +59,13 @@ export default function Home() {
     setActiveJobId(job.id);
   };
 
+  const handleJobDeleted = (id: string) => {
+    setJobs((prev) => prev.filter((j) => j.id !== id));
+    if (activeJobId === id) {
+      setActiveJobId(null);
+    }
+  };
+
   const navigateWithJob = (v: ViewKey, jobId?: string) => {
     if (jobId) setActiveJobId(jobId);
     setView(v);
@@ -87,6 +95,7 @@ export default function Home() {
           onSelectJob={handleSelectJob}
           onJobCreated={handleJobCreated}
           onRunPipeline={(id) => navigateWithJob("pipeline", id)}
+          onDeleteJob={handleJobDeleted}
         />
       )}
       {view === "pipeline" && activeJob && (
@@ -102,6 +111,10 @@ export default function Home() {
       {view === "review" && activeJob && <ReviewView job={activeJob} />}
       {view === "review" && !activeJob && (
         <EmptyState message="Select a job to review." action={() => setView("jobs")} actionLabel="Go to Jobs" />
+      )}
+      {view === "honeypot" && activeJob && <HoneypotView job={activeJob} />}
+      {view === "honeypot" && !activeJob && (
+        <EmptyState message="Select a job to inspect honeypots." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
       {view === "quality" && activeJob && <QualityView job={activeJob} />}
       {view === "quality" && !activeJob && (

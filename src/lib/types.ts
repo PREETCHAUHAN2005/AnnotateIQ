@@ -155,3 +155,24 @@ export type JobComparison = {
   kappaChapter: { value: number; label: string; tone: "good" | "warn" | "bad" };
   distDifficulty: Record<string, number>;
 };
+
+export type HoneypotDiff = {
+  field: string;
+  gold: string;
+  predicted: string;
+  match: boolean;
+};
+
+export type HoneypotResult = {
+  unitId: string;
+  seq: number;
+  stem: string;
+  isHoneypot: boolean;
+  gold: Record<string, unknown> | null;
+  predicted: Record<string, unknown> | null;
+  confidence: number | null;
+  route: "auto" | "human" | null;
+  reviewerAction: string | null;
+  event: { kind: string; detail: string | null } | null;
+  diffs: HoneypotDiff[];
+};

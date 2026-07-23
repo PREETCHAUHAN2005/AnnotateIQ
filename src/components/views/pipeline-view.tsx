@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -66,6 +67,7 @@ export function PipelineView({
   const [autoCount, setAutoCount] = useState(0);
   const [humanCount, setHumanCount] = useState(0);
   const [running, setRunning] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
   const [pulse, setPulse] = useState<Record<string, number>>({});
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -208,6 +210,20 @@ export function PipelineView({
     }
   };
 
+  const rerunPipeline = async () => {
+    if (!confirm("Re-run the pipeline? This clears all existing drafts, finals, and quality events for this job.")) return;
+    setRerunning(true);
+    try {
+      await api.resetJob(job.id);
+      toast.success("Job reset — starting pipeline...");
+      setRerunning(false);
+      runPipeline();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Reset failed");
+      setRerunning(false);
+    }
+  };
+
   const progressPct = total > 0 ? (done / total) * 100 : 0;
 
   return (
@@ -221,10 +237,16 @@ export function PipelineView({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="font-mono text-xs">{job.filename}</Badge>
-          <Button onClick={runPipeline} disabled={running} className="gap-2">
+          <Button onClick={runPipeline} disabled={running || rerunning} className="gap-2">
             {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             {running ? "Running…" : "Run pipeline"}
           </Button>
+          {(job.status === "review" || job.status === "done") && (
+            <Button onClick={rerunPipeline} disabled={running || rerunning} variant="outline" className="gap-2">
+              {rerunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Re-run
+            </Button>
+          )}
         </div>
       </div>
 

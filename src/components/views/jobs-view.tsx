@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FileText, Play, FileUp, ScanLine, Image as ImageIcon, Loader2 } from "lucide-react";
+import { FileText, Play, FileUp, ScanLine, Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function JobsView({
@@ -21,14 +21,17 @@ export function JobsView({
   onSelectJob,
   onJobCreated,
   onRunPipeline,
+  onDeleteJob,
 }: {
   jobs: Job[];
   activeJobId: string | null;
   onSelectJob: (id: string) => void;
   onJobCreated: (job: Job) => void;
   onRunPipeline: (id: string) => void;
+  onDeleteJob: (id: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const createSample = async (paperId: string) => {
     setCreating(true);
@@ -40,6 +43,20 @@ export function JobsView({
       toast.error(e instanceof Error ? e.message : "Failed to create job");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: string, filename: string) => {
+    if (!confirm(`Delete job "${filename}"? This removes all its units, drafts, and finals.`)) return;
+    setDeletingId(id);
+    try {
+      await api.deleteJob(id);
+      onDeleteJob(id);
+      toast.success("Job deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -121,8 +138,10 @@ export function JobsView({
                   key={j.id}
                   job={j}
                   active={j.id === activeJobId}
+                  deleting={deletingId === j.id}
                   onSelect={() => onSelectJob(j.id)}
                   onRun={() => onRunPipeline(j.id)}
+                  onDelete={() => handleDelete(j.id, j.filename)}
                 />
               ))}
             </div>
@@ -188,20 +207,25 @@ function PasteForm({ onJobCreated }: { onJobCreated: (job: Job) => void }) {
 function JobRow({
   job,
   active,
+  deleting,
   onSelect,
   onRun,
+  onDelete,
 }: {
   job: Job;
   active: boolean;
+  deleting: boolean;
   onSelect: () => void;
   onRun: () => void;
+  onDelete: () => void;
 }) {
   const canRun = job.status === "pending" || job.status === "failed";
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border transition",
-        active ? "border-primary/50 bg-primary/5" : "border-border/60 hover:bg-accent/30"
+        "flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border transition group",
+        active ? "border-primary/50 bg-primary/5" : "border-border/60 hover:bg-accent/30",
+        deleting && "opacity-50"
       )}
     >
       <button onClick={onSelect} className="flex items-center gap-3 flex-1 min-w-0 text-left">
@@ -224,6 +248,16 @@ function JobRow({
             View
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onDelete}
+          disabled={deleting}
+          className="gap-1.5 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition"
+          title="Delete job"
+        >
+          {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+        </Button>
       </div>
     </div>
   );

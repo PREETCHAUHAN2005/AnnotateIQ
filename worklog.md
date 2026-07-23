@@ -175,3 +175,42 @@ Stage Summary:
 - All 8 views verified working via agent-browser + VLM
 - 0 lint errors
 - App now has 8 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Quality, Compare Jobs, Export
+
+---
+Task ID: 13
+Agent: main (cron review round 4)
+Task: QA testing, new features (Honeypot Inspector, job deletion, re-run pipeline), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: "Honeypot Inspector" view (9th sidebar nav item, src/components/views/honeypot-view.tsx):
+  - Summary cards: Total honeypots, Passed, Failed, Field accuracy
+  - Overall honeypot accuracy bar (color-coded: emerald ≥80%, amber ≥50%, rose <50%)
+  - Split pane: honeypot list (left) + field-by-field diff detail (right)
+  - Each honeypot shows gold vs predicted comparison for chapter/difficulty/bloom/language
+  - Mismatched fields highlighted in red, matched fields in green with checkmark icons
+  - Event detail (pass/fail JSON), confidence, route, review status
+  - New /api/jobs/[id]/honeypots API route computing gold-predicted diffs
+- NEW FEATURE: Job deletion — delete button on each job row (hover-reveal, with confirm dialog)
+  - New DELETE /api/jobs/[id] route (cascade deletes units/drafts/finals/events)
+  - Frontend updates job list and clears active job if deleted
+- NEW FEATURE: Re-run pipeline — "Re-run" button on Pipeline view (visible when job is review/done)
+  - New POST /api/jobs/[id]/reset route (clears drafts/finals/events, resets units to pending)
+  - Resets then automatically starts the pipeline again
+- Updated API client with deleteJob + resetJob methods
+- Added HoneypotResult + HoneypotDiff types
+- STYLING IMPROVEMENTS:
+  - Job rows: hover-reveal delete button with rose hover, group-hover opacity transition
+  - Honeypot Inspector: card-hover + animate-fade-in on summary cards, color-coded diff rows
+  - Pipeline view: Re-run button with RotateCcw icon
+- ESLint: 0 errors, 3 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Overview: 9 nav items, hero with feature pills, 5 stat cards ✓
+  - Honeypot Inspector: summary cards (Total=1, Passed=0, Failed=1, Field Accuracy=25%), overall accuracy bar, honeypot list, field-by-field diff detail panel with Gold vs Predicted columns and mismatch highlighting ✓
+
+Stage Summary:
+- Added 9th view: "Honeypot Inspector" — the externally verifiable quality view with gold vs predicted field-level diff
+- Added job management: delete jobs + re-run pipeline from the UI
+- App now has 9 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Export
+- 0 lint errors
+- All new features verified working via agent-browser + VLM
