@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { AppShell } from "@/components/app-shell";
+import { CommandPalette, KeyboardShortcutsHelp } from "@/components/command-palette";
 import { OverviewView } from "@/components/views/overview-view";
 
 // Lazy-load heavy views to reduce initial compile memory footprint.
@@ -15,15 +16,19 @@ const ReviewView = dynamic(() => import("@/components/views/review-view").then((
 const QualityView = dynamic(() => import("@/components/views/quality-view").then((m) => m.QualityView), { ssr: false });
 const HoneypotView = dynamic(() => import("@/components/views/honeypot-view").then((m) => m.HoneypotView), { ssr: false });
 const CompareView = dynamic(() => import("@/components/views/compare-view").then((m) => m.CompareView), { ssr: false });
+const ArchitectureView = dynamic(() => import("@/components/views/architecture-view").then((m) => m.ArchitectureView), { ssr: false });
 const ExportView = dynamic(() => import("@/components/views/export-view").then((m) => m.ExportView), { ssr: false });
 
-export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "export";
+export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "architecture" | "export";
 
 export default function Home() {
   const [view, setView] = useState<ViewKey>("overview");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [gPressed, setGPressed] = useState(false);
 
   const refreshJobs = useCallback(async () => {
     setLoadingJobs(true);
@@ -47,6 +52,57 @@ export default function Home() {
     const t = setInterval(refreshJobs, 6000);
     return () => clearInterval(t);
   }, [refreshJobs]);
+
+  // keyboard shortcuts: Cmd+K (palette), ? (help), g+key (view nav)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable;
+      if (isInput) return;
+
+      // Cmd/Ctrl+K → command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
+      // ? → help overlay
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setHelpOpen((v) => !v);
+        return;
+      }
+
+      // g + key → navigate to view
+      if (e.key === "g" && !e.metaKey && !e.ctrlKey) {
+        setGPressed(true);
+        setTimeout(() => setGPressed(false), 1000);
+        return;
+      }
+      if (gPressed) {
+        const map: Record<string, ViewKey> = {
+          o: "overview",
+          j: "jobs",
+          p: "pipeline",
+          u: "units",
+          r: "review",
+          h: "honeypot",
+          q: "quality",
+          c: "compare",
+          a: "architecture",
+          e: "export",
+        };
+        const v = map[e.key.toLowerCase()];
+        if (v) {
+          e.preventDefault();
+          setView(v);
+        }
+        setGPressed(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [gPressed]);
 
   const activeJob = jobs.find((j) => j.id === activeJobId) ?? null;
 
@@ -72,6 +128,7 @@ export default function Home() {
   };
 
   return (
+    <>
     <AppShell
       view={view}
       onViewChange={setView}
@@ -121,11 +178,15 @@ export default function Home() {
         <EmptyState message="Select a job to view quality." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
       {view === "compare" && <CompareView />}
+      {view === "architecture" && <ArchitectureView />}
       {view === "export" && activeJob && <ExportView job={activeJob} />}
       {view === "export" && !activeJob && (
         <EmptyState message="Select a job to export." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
     </AppShell>
+    <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onViewChange={setView} />
+    <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+    </>
   );
 }
 

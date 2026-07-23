@@ -17,6 +17,7 @@ import {
   TableProperties,
   GitCompare,
   FlaskConical,
+  Network,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -30,6 +31,7 @@ const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?
   { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical },
   { key: "quality", label: "Quality", icon: Gauge },
   { key: "compare", label: "Compare Jobs", icon: GitCompare },
+  { key: "architecture", label: "Architecture", icon: Network },
   { key: "export", label: "Export", icon: Download },
 ];
 
@@ -213,6 +215,9 @@ export function AppShell({
             <span className="font-mono">MAX_ATTEMPTS = 2</span>
             <span>·</span>
             <span className="font-mono">K = 3</span>
+            <span>·</span>
+            <kbd className="font-mono px-1.5 py-0.5 rounded bg-muted border border-border text-[10px]">⌘K</kbd>
+            <span className="hidden sm:inline">command palette</span>
           </div>
         </div>
       </footer>

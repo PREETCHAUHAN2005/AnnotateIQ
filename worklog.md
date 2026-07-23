@@ -214,3 +214,49 @@ Stage Summary:
 - App now has 9 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Export
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 14
+Agent: main (cron review round 5)
+Task: QA testing, new features (Architecture view, command palette, keyboard shortcuts, CSV export), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: "Architecture" view (10th sidebar nav item, src/components/views/architecture-view.tsx):
+  - "The four load-bearing rules" banner with numbered cards
+  - Interactive pipeline data flow diagram: Unit Input → Fan-out (5 agent nodes) → Merge → Score & Route
+  - Each agent node shows sample count (k) and temperature badges
+  - 5 agent detail cards with icon, name, description, owned fields (disjoint contract), k, temperature
+  - Click any agent → modal with full system prompt excerpt, description, fields owned, stats
+  - Color-coded by agent tone (emerald/teal/violet/amber/rose) with matching glow effects
+- NEW FEATURE: Command palette (Cmd/Ctrl+K) — fuzzy search across all 10 views, arrow-key navigation, Enter to select
+  - Shows keyboard shortcuts for each view (g+o, g+j, g+p, etc.)
+  - src/components/command-palette.tsx
+- NEW FEATURE: Keyboard shortcuts help overlay (? key) — lists all global + review queue shortcuts
+  - Global: Cmd+K (palette), ? (help), g+key (view navigation)
+  - Review: A (accept), E (edit), R (reject), J (next), K (prev)
+- NEW FEATURE: CSV export format — 3 download buttons now (JSONL, JSON, CSV)
+  - CSV includes proper escaping for commas, quotes, newlines
+  - Array fields (concepts, latex, options) joined with semicolons/pipes
+  - Updated export API route to support format=csv
+- NEW FEATURE: Dataset schema preview in Export view — 16-field schema grid showing field name, type, and description
+- STYLING IMPROVEMENTS:
+  - Footer: added ⌘K command palette hint
+  - Architecture view: card-hover effects, glow-emerald/glow-amber/glow-rose on agent nodes, animate-fade-in
+  - Command palette: backdrop blur, active row highlighting, kbd badge styling
+  - Export view: schema preview grid with monospace field names and type badges
+- Fixed lint errors: JSX fragment wrapper in page.tsx, setState-in-effect in command-palette
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Overview: 10 nav items, hero with feature pills ✓
+  - Architecture: "Agent Architecture" title, "four load-bearing rules" banner, "Pipeline data flow" diagram, all 5 agent cards (TaxonomyAgent, DifficultyAgent, MathAgent, LanguageAgent, CriticAgent) ✓
+  - Command palette (Cmd+K): search input "Jump to view...", 10 views with shortcuts ✓
+  - Keyboard shortcuts help (?): full list of global + review shortcuts ✓
+
+Stage Summary:
+- Added 10th view: "Architecture" — interactive agent visualization with prompts and data flow
+- Added command palette (Cmd+K) + keyboard shortcuts overlay (?) for power-user navigation
+- Added CSV export format + dataset schema preview
+- App now has 10 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Architecture, Export
+- 0 lint errors
+- All new features verified working via agent-browser + VLM

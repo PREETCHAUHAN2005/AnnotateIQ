@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, FileJson, FileText, Loader2, CheckCircle2, Filter } from "lucide-react";
+import { Download, FileJson, FileText, FileSpreadsheet, Loader2, CheckCircle2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +76,50 @@ export function ExportView({ job }: { job: Job }) {
             <FileJson className="h-4 w-4" /> Download JSON
           </a>
         </Button>
+        <Button asChild variant="outline" className="gap-2">
+          <a href={api.exportUrl(job.id, "csv")} download>
+            <FileSpreadsheet className="h-4 w-4" /> Download CSV
+          </a>
+        </Button>
       </div>
+
+      {/* Schema preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Dataset schema</CardTitle>
+          <CardDescription>Fields in each exported record</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {[
+              { field: "unit_id", type: "string", desc: "unique unit identifier" },
+              { field: "stem", type: "string", desc: "question text" },
+              { field: "options", type: "string[]", desc: "MCQ options or null" },
+              { field: "chapter", type: "string", desc: "NCERT chapter (closed vocab)" },
+              { field: "concepts", type: "string[]", desc: "1-4 key concepts" },
+              { field: "difficulty", type: "enum", desc: "easy | medium | hard" },
+              { field: "bloom", type: "enum", desc: "remember | understand | apply | analyze" },
+              { field: "difficulty_rationale", type: "string", desc: "grounded quote from stem" },
+              { field: "latex", type: "string[]", desc: "LaTeX expressions" },
+              { field: "has_equation", type: "boolean", desc: "contains math" },
+              { field: "language", type: "enum", desc: "en | hi | hinglish" },
+              { field: "code_mix_ratio", type: "float", desc: "0.0-1.0" },
+              { field: "confidence", type: "float", desc: "weakest-link score" },
+              { field: "agreement", type: "float", desc: "min field agreement" },
+              { field: "route", type: "enum", desc: "auto | human" },
+              { field: "reviewer_action", type: "enum", desc: "accept | edit | reject | auto" },
+            ].map((f) => (
+              <div key={f.field} className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-primary">{f.field}</code>
+                  <span className="text-[9px] text-muted-foreground font-mono px-1 py-0.5 rounded bg-muted">{f.type}</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1">{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
