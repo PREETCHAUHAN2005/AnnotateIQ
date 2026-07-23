@@ -6,6 +6,7 @@ import type {
   JobComparison,
   QualityStats,
   ReviewItem,
+  TaxonomyStats,
   Unit,
 } from "@/lib/types";
 
@@ -70,4 +71,5 @@ export const api = {
   compareJobs: () => jfetch<{ jobs: JobComparison[] }>("/api/compare"),
   deleteJob: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
   resetJob: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}/reset`, { method: "POST" }),
+  getTaxonomy: () => jfetch<TaxonomyStats>("/api/taxonomy"),
 };

@@ -260,3 +260,40 @@ Stage Summary:
 - App now has 10 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Architecture, Export
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 15
+Agent: main (cron review round 6)
+Task: QA testing, new features (Taxonomy Browser, batch review actions), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: "Taxonomy" view (11th sidebar nav item, src/components/views/taxonomy-view.tsx):
+  - Coverage summary cards: Total Chapters (29), Covered (12), Uncovered (17), Questions (24)
+  - "Questions per chapter" stacked bar chart (auto vs human, color-coded)
+  - Search bar + filter buttons (All / Covered / Uncovered)
+  - Chapter grid: each card shows coverage status, question count, auto/human split, auto-rate progress bar
+  - Uncovered chapters shown with dashed border + reduced opacity
+  - Click any chapter → modal with avg confidence, auto-accept rate, difficulty breakdown bars, bloom level badges, top concepts list
+  - New /api/taxonomy API route aggregating chapter stats across all jobs
+- NEW FEATURE: Batch review actions in Review Queue:
+  - "Accept all" button — accepts all unreviewed units in one batch (with confirm dialog)
+  - "Reject all" button — rejects all unreviewed units (with confirm dialog)
+  - Progress feedback via toast notifications
+  - Buttons only visible when there are unreviewed units
+- Updated command palette + keyboard shortcuts to include Taxonomy (g+t)
+- STYLING IMPROVEMENTS:
+  - Taxonomy view: card-hover effects, color-coded coverage cards, dashed borders for uncovered chapters, animate-fade-in
+  - Review Queue: batch action buttons with emerald/rose color coding
+  - Chapter detail modal: difficulty breakdown bars, bloom badges, top concepts list
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Overview: 11 nav items ✓
+  - Taxonomy Browser: summary cards (29 total, 12 covered, 17 uncovered, 24 questions), "Questions per chapter" chart, chapter grid with search + filters ✓
+
+Stage Summary:
+- Added 11th view: "Taxonomy Browser" — explore 29 NCERT chapters with coverage stats, search, filters, and per-chapter detail modal
+- Added batch review actions (accept all / reject all) for faster review workflow
+- App now has 11 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Taxonomy, Architecture, Export
+- 0 lint errors
+- All new features verified working via agent-browser + VLM

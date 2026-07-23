@@ -16,10 +16,11 @@ const ReviewView = dynamic(() => import("@/components/views/review-view").then((
 const QualityView = dynamic(() => import("@/components/views/quality-view").then((m) => m.QualityView), { ssr: false });
 const HoneypotView = dynamic(() => import("@/components/views/honeypot-view").then((m) => m.HoneypotView), { ssr: false });
 const CompareView = dynamic(() => import("@/components/views/compare-view").then((m) => m.CompareView), { ssr: false });
+const TaxonomyView = dynamic(() => import("@/components/views/taxonomy-view").then((m) => m.TaxonomyView), { ssr: false });
 const ArchitectureView = dynamic(() => import("@/components/views/architecture-view").then((m) => m.ArchitectureView), { ssr: false });
 const ExportView = dynamic(() => import("@/components/views/export-view").then((m) => m.ExportView), { ssr: false });
 
-export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "architecture" | "export";
+export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "taxonomy" | "architecture" | "export";
 
 export default function Home() {
   const [view, setView] = useState<ViewKey>("overview");
@@ -89,6 +90,7 @@ export default function Home() {
           h: "honeypot",
           q: "quality",
           c: "compare",
+          t: "taxonomy",
           a: "architecture",
           e: "export",
         };
@@ -178,6 +180,7 @@ export default function Home() {
         <EmptyState message="Select a job to view quality." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
       {view === "compare" && <CompareView />}
+      {view === "taxonomy" && <TaxonomyView />}
       {view === "architecture" && <ArchitectureView />}
       {view === "export" && activeJob && <ExportView job={activeJob} />}
       {view === "export" && !activeJob && (

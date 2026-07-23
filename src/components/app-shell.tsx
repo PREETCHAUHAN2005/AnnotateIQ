@@ -18,6 +18,7 @@ import {
   GitCompare,
   FlaskConical,
   Network,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -31,6 +32,7 @@ const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?
   { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical },
   { key: "quality", label: "Quality", icon: Gauge },
   { key: "compare", label: "Compare Jobs", icon: GitCompare },
+  { key: "taxonomy", label: "Taxonomy", icon: BookOpen },
   { key: "architecture", label: "Architecture", icon: Network },
   { key: "export", label: "Export", icon: Download },
 ];

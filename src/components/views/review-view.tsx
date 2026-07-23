@@ -32,6 +32,8 @@ import {
   ShieldCheck,
   Bot,
   Gauge,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +102,30 @@ export function ReviewView({ job }: { job: Job }) {
     }
   };
 
+  const batchAction = async (action: "accept" | "reject") => {
+    const unreviewed = items.filter((i) => !i.reviewerAction);
+    if (unreviewed.length === 0) {
+      toast.info("No unreviewed units to batch process.");
+      return;
+    }
+    if (!confirm(`${action === "accept" ? "Accept" : "Reject"} all ${unreviewed.length} unreviewed units?`)) return;
+    setSubmitting(true);
+    let ok = 0;
+    let fail = 0;
+    for (const item of unreviewed) {
+      try {
+        await api.submitReview(item.unitId, { action, reviewer: "reviewer" });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setSubmitting(false);
+    if (ok > 0) toast.success(`${ok} unit${ok !== 1 ? "s" : ""} ${action}ed`);
+    if (fail > 0) toast.error(`${fail} failed`);
+    setRefreshTick((t) => t + 1);
+  };
+
   // keyboard shortcuts: A accept, E edit-mode, R reject, J/K navigate
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -134,9 +160,33 @@ export function ReviewView({ job }: { job: Job }) {
             <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">J</kbd>/<kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">K</kbd> nav
           </p>
         </div>
-        <Badge variant="outline" className="font-mono text-xs gap-1.5">
-          {reviewedCount} / {items.length} reviewed
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="font-mono text-xs gap-1.5">
+            {reviewedCount} / {items.length} reviewed
+          </Badge>
+          {items.length > 0 && reviewedCount < items.length && (
+            <div className="flex gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => batchAction("accept")}
+                disabled={submitting}
+                className="gap-1.5 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> Accept all
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => batchAction("reject")}
+                disabled={submitting}
+                className="gap-1.5 border-rose-500/40 text-rose-400 hover:bg-rose-500/10"
+              >
+                <XCircle className="h-3.5 w-3.5" /> Reject all
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (

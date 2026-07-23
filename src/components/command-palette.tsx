@@ -21,6 +21,7 @@ import {
   Download,
   Search,
   Keyboard,
+  BookOpen,
 } from "lucide-react";
 import type { ViewKey } from "@/app/page";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const SHORTCUTS: { key: ViewKey; label: string; icon: React.ComponentType<{ clas
   { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical, shortcut: "g h" },
   { key: "quality", label: "Quality Dashboard", icon: Gauge, shortcut: "g q" },
   { key: "compare", label: "Compare Jobs", icon: GitCompare, shortcut: "g c" },
+  { key: "taxonomy", label: "Taxonomy Browser", icon: BookOpen, shortcut: "g t" },
   { key: "architecture", label: "Architecture", icon: Network, shortcut: "g a" },
   { key: "export", label: "Export", icon: Download, shortcut: "g e" },
 ];

@@ -176,3 +176,22 @@ export type HoneypotResult = {
   event: { kind: string; detail: string | null } | null;
   diffs: HoneypotDiff[];
 };
+
+export type ChapterStat = {
+  name: string;
+  count: number;
+  autoCount: number;
+  humanCount: number;
+  avgConfidence: number;
+  autoRate: number;
+  difficulties: Record<string, number>;
+  blooms: Record<string, number>;
+  topConcepts: { concept: string; count: number }[];
+};
+
+export type TaxonomyStats = {
+  totalChapters: number;
+  coveredChapters: number;
+  totalQuestions: number;
+  chapters: ChapterStat[];
+};
