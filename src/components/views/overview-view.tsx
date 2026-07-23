@@ -4,6 +4,8 @@ import type { Job } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PipelineHealth } from "@/components/pipeline-health";
+import { AnimatedCounter } from "@/components/animated-counter";
 import {
   Atom,
   GitBranch,
@@ -99,6 +101,9 @@ export function OverviewView({
         </CardContent>
       </Card>
 
+      {/* Pipeline health widget */}
+      <PipelineHealth />
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Jobs" value={jobs.length} icon={ListChecks} tone="primary" />
@@ -175,7 +180,9 @@ function StatCard({
             <Icon className={cn("h-3.5 w-3.5", toneClass)} />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-bold tabular-nums">{value}</div>
+        <div className="mt-2 text-2xl font-bold tabular-nums">
+          <AnimatedCounter value={value} />
+        </div>
       </CardContent>
     </Card>
   );

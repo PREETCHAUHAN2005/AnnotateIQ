@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { AppShell } from "@/components/app-shell";
 import { CommandPalette, KeyboardShortcutsHelp } from "@/components/command-palette";
+import { OnboardingTour } from "@/components/onboarding-tour";
 import { OverviewView } from "@/components/views/overview-view";
 
 // Lazy-load heavy views to reduce initial compile memory footprint.
@@ -198,6 +199,7 @@ export default function Home() {
     </AppShell>
     <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onViewChange={setView} />
     <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+    <OnboardingTour />
     </>
   );
 }

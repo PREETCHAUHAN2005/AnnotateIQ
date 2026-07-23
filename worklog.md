@@ -369,3 +369,43 @@ Stage Summary:
 - App now has 14 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Insights, Taxonomy, Global Search, Activity, Architecture, Export
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 18
+Agent: main (cron review round 9)
+Task: QA testing, new features (onboarding tour, animated counters, pipeline health widget), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: Onboarding tour overlay (src/components/onboarding-tour.tsx):
+  - 9-step guided tour introducing all major features (Welcome, Live Pipeline, Review Queue, Quality, Honeypot, Insights, Search, Export, Keyboard Shortcuts)
+  - Shows on first visit (localStorage flag), can be skipped
+  - Step indicators with clickable progress dots
+  - Color-coded icons per step, Back/Next/Skip buttons
+  - "Get started" button on final step
+- NEW FEATURE: AnimatedCounter component (src/components/animated-counter.tsx):
+  - Count-up animation with easeOutCubic easing (800ms duration)
+  - Used in overview stat cards for a polished feel
+  - Configurable decimals, prefix, suffix
+- NEW FEATURE: Pipeline Health widget on Overview (src/components/pipeline-health.tsx):
+  - Live system status: "All systems operational" / "Some units need attention" / "System unavailable"
+  - 4 metrics: Agents available (5), DB status (UP/DOWN), Labeled units, Pending units
+  - Auto-refreshes every 5 seconds
+  - Color-coded status badge with animated pulse dot
+  - New /api/health API route
+- STYLING IMPROVEMENTS:
+  - Overview: Pipeline Health widget with card-hover, animated status dot
+  - Stat cards: animated count-up using AnimatedCounter
+  - Onboarding tour: gradient icon backgrounds, step progress dots
+- Fixed lint errors: setState-in-effect in animated-counter and onboarding-tour (moved to setTimeout)
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Onboarding tour: "Welcome to AnnotateIQ" dialog, "Step 1 of 9", Skip/Next buttons ✓
+  - Pipeline Health: "All systems operational" badge, Agents=5, DB=UP, Labeled=24/24, Pending=0 ✓
+
+Stage Summary:
+- Added onboarding tour (9 steps) for first-time users
+- Added animated count-up counters for stat cards
+- Added Pipeline Health widget with live system metrics on Overview
+- 0 lint errors
+- All new features verified working via agent-browser + VLM
