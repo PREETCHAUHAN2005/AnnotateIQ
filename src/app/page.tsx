@@ -16,13 +16,14 @@ const ReviewView = dynamic(() => import("@/components/views/review-view").then((
 const QualityView = dynamic(() => import("@/components/views/quality-view").then((m) => m.QualityView), { ssr: false });
 const HoneypotView = dynamic(() => import("@/components/views/honeypot-view").then((m) => m.HoneypotView), { ssr: false });
 const CompareView = dynamic(() => import("@/components/views/compare-view").then((m) => m.CompareView), { ssr: false });
+const InsightsView = dynamic(() => import("@/components/views/insights-view").then((m) => m.InsightsView), { ssr: false });
 const TaxonomyView = dynamic(() => import("@/components/views/taxonomy-view").then((m) => m.TaxonomyView), { ssr: false });
 const SearchView = dynamic(() => import("@/components/views/search-view").then((m) => m.SearchView), { ssr: false });
 const ActivityView = dynamic(() => import("@/components/views/activity-view").then((m) => m.ActivityView), { ssr: false });
 const ArchitectureView = dynamic(() => import("@/components/views/architecture-view").then((m) => m.ArchitectureView), { ssr: false });
 const ExportView = dynamic(() => import("@/components/views/export-view").then((m) => m.ExportView), { ssr: false });
 
-export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "taxonomy" | "search" | "activity" | "architecture" | "export";
+export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "honeypot" | "quality" | "compare" | "insights" | "taxonomy" | "search" | "activity" | "architecture" | "export";
 
 export default function Home() {
   const [view, setView] = useState<ViewKey>("overview");
@@ -92,6 +93,7 @@ export default function Home() {
           h: "honeypot",
           q: "quality",
           c: "compare",
+          i: "insights",
           t: "taxonomy",
           s: "search",
           y: "activity",
@@ -184,6 +186,7 @@ export default function Home() {
         <EmptyState message="Select a job to view quality." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
       {view === "compare" && <CompareView />}
+      {view === "insights" && <InsightsView />}
       {view === "taxonomy" && <TaxonomyView />}
       {view === "search" && <SearchView />}
       {view === "activity" && <ActivityView />}

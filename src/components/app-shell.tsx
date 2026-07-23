@@ -21,6 +21,7 @@ import {
   BookOpen,
   Activity,
   Search,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -34,6 +35,7 @@ const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?
   { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical },
   { key: "quality", label: "Quality", icon: Gauge },
   { key: "compare", label: "Compare Jobs", icon: GitCompare },
+  { key: "insights", label: "Insights", icon: TrendingUp },
   { key: "taxonomy", label: "Taxonomy", icon: BookOpen },
   { key: "search", label: "Global Search", icon: Search },
   { key: "activity", label: "Activity", icon: Activity },

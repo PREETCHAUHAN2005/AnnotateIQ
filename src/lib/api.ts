@@ -3,6 +3,7 @@ import type {
   Draft,
   FinalRecord,
   HoneypotResult,
+  InsightsStats,
   Job,
   JobComparison,
   QualityStats,
@@ -79,4 +80,5 @@ export const api = {
       `/api/activity${jobId ? `?jobId=${jobId}` : ""}${kind ? `${jobId ? "&" : "?"}kind=${kind}` : ""}`
     ),
   search: (q: string) => jfetch<{ results: SearchResult[]; total: number; query: string }>(`/api/search?q=${encodeURIComponent(q)}`),
+  getInsights: () => jfetch<InsightsStats>("/api/insights"),
 };

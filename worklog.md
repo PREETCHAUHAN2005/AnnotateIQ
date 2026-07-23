@@ -339,3 +339,33 @@ Stage Summary:
 - App now has 13 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Taxonomy, Global Search, Activity, Architecture, Export
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 17
+Agent: main (cron review round 8)
+Task: QA testing, new feature (Insights & Analytics view), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: "Insights" view (14th sidebar nav item, src/components/views/insights-view.tsx):
+  - 4 KPI cards: Overall Auto-rate (%), Avg Confidence, Hours Saved, Total Units — all with color-coded icon badges
+  - Auto-accept rate trend (line chart with dots) — per-job auto-accept percentage
+  - Confidence & kappa trend (multi-line chart) — avg confidence + Fleiss' κ per job
+  - Cumulative growth (area chart with gradient fills) — cumulative auto/human units over time
+  - 3 distribution charts: Difficulty mix (pie), Bloom levels (bar), Languages (donut)
+  - Best performing job banner (glow-emerald) with trophy icon and auto-accept rate
+  - New /api/insights API route aggregating cross-job trends, cumulative metrics, and distributions
+- Updated command palette + keyboard shortcuts to include Insights (g+i)
+- STYLING IMPROVEMENTS:
+  - Insights view: card-hover + animate-fade-in on KPI cards, gradient area chart fills, glow-emerald on best-job banner
+  - All charts use consistent dark theme with oklch color tokens
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Overview: 14 nav items ✓
+  - Insights: "Insights & Analytics" title, 4 KPI cards (Overall Auto-rate, Avg Confidence, Hours Saved, Total Units), Auto-accept rate trend chart, Confidence & kappa trend chart, Cumulative growth area chart, Difficulty mix pie, Bloom levels bar, Languages donut, Best performing job banner ✓
+
+Stage Summary:
+- Added 14th view: "Insights & Analytics" — cross-job trends with line/area/pie/bar charts and cumulative growth
+- App now has 14 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Insights, Taxonomy, Global Search, Activity, Architecture, Export
+- 0 lint errors
+- All new features verified working via agent-browser + VLM

@@ -222,3 +222,40 @@ export type SearchResult = {
   reviewerAction: string | null;
   matchedFields: string[];
 };
+
+export type JobTrend = {
+  jobId: string;
+  filename: string;
+  createdAt: string;
+  units: number;
+  auto: number;
+  human: number;
+  reviewed: number;
+  autoRate: number;
+  avgConfidence: number;
+  honeypotAccuracy: number;
+  kappa: number;
+  hoursSaved: number;
+  cumulativeUnits: number;
+  cumulativeAuto: number;
+  cumulativeHuman: number;
+  cumulativeHours: number;
+};
+
+export type InsightsStats = {
+  summary: {
+    totalJobs: number;
+    totalUnits: number;
+    totalAuto: number;
+    totalHuman: number;
+    overallAutoRate: number;
+    overallAvgConf: number;
+    totalHoursSaved: number;
+  };
+  trends: JobTrend[];
+  distributions: {
+    difficulty: Record<string, number>;
+    bloom: Record<string, number>;
+    language: Record<string, number>;
+  };
+};
