@@ -1,0 +1,96 @@
+// AnnotateIQ — multi-agent annotation pipeline for JEE Physics
+// Adapted from §2 Postgres schema to SQLite
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  filename    String
+  source      String   @default("sample") // sample | paste | pdf
+  status      String   @default("pending") // pending|extracting|labeling|review|done|failed
+  unitCount   Int      @default(0)
+  autoCount   Int      @default(0)
+  humanCount  Int      @default(0)
+  reviewedCount Int    @default(0)
+  createdAt   DateTime @default(now())
+  units       Unit[]
+  finals      Final[]
+  qualityEvents QualityEvent[]
+}
+
+model Unit {
+  id          String   @id @default(cuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  seq         Int      // question number in paper
+  page        Int      @default(1)
+  bbox        String?  // JSON {x,y,w,h}
+  rawText     String
+  stem        String?  // parsed question stem
+  optionsJson String?  // JSON list[str] | null
+  isHoneypot  Boolean  @default(false)
+  goldPayload String?  // JSON — only when isHoneypot
+  attempt     Int      @default(0)
+  status      String   @default("pending") // pending|labeling|labeled|reviewed
+  createdAt   DateTime @default(now())
+  drafts      Draft[]
+  final       Final?
+  qualityEvents QualityEvent[]
+}
+
+model Draft {
+  id          String   @id @default(cuid())
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  agent       String   // taxonomy|difficulty|math|language|critic
+  sampleIdx   Int      @default(0) // 0..k-1 for self-consistency
+  attempt     Int      @default(1)
+  payload     String   // JSON — agent output
+  latencyMs   Int?
+  createdAt   DateTime @default(now())
+
+  @@index([unitId, agent])
+}
+
+model Final {
+  id              String   @id @default(cuid())
+  unitId          String   @unique
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  jobId           String
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  payload         String   // JSON — merged UnitAnnotation
+  confidence      Float
+  agreement       Float
+  route           String   // auto|human
+  reviewedBy      String?
+  reviewerAction  String?  // accept|edit|reject
+  reviewNote      String?
+  createdAt       DateTime @default(now())
+}
+
+model QualityEvent {
+  id          String   @id @default(cuid())
+  unitId      String
+  unit        Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  kind        String   // honeypot_pass|honeypot_fail|critic_fail|schema_fail|disagreement|retry
+  detail      String?  // JSON
+  createdAt   DateTime @default(now())
+}
+
+// Frozen hand-labelled gold units used as honeypots across every job
+model Honeypot {
+  id        String   @id @default(cuid())
+  seq       Int      @unique
+  stem      String
+  optionsJson String?
+  goldPayload String // JSON — full UnitAnnotation
+}

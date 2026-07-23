@@ -1,0 +1,142 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { Job, FinalRecord } from "@/lib/types";
+import { api } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Download, FileJson, FileText, Loader2, CheckCircle2, Filter } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+export function ExportView({ job }: { job: Job }) {
+  const [finals, setFinals] = useState<FinalRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .getFinals(job.id)
+      .then((r) => setFinals(r.finals))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "load failed"))
+      .finally(() => setLoading(false));
+  }, [job.id]);
+
+  const eligible = finals.filter(
+    (f) => f.route === "auto" || f.reviewerAction === "accept" || f.reviewerAction === "edit"
+  );
+  const excluded = finals.filter(
+    (f) => !(f.route === "auto" || f.reviewerAction === "accept" || f.reviewerAction === "edit")
+  );
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Export</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          ML-ready dataset. Only rows where <code className="text-primary text-xs">route=&apos;auto&apos;</code> OR{" "}
+          <code className="text-primary text-xs">reviewer_action IN (&apos;accept&apos;,&apos;edit&apos;)</code>.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Total finals</div>
+            <div className="text-2xl font-bold tabular-nums mt-1">{finals.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-emerald-500/30">
+          <CardContent className="p-4">
+            <div className="text-xs text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3" /> Eligible
+            </div>
+            <div className="text-2xl font-bold tabular-nums mt-1 text-emerald-400">{eligible.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-400/30">
+          <CardContent className="p-4">
+            <div className="text-xs text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Filter className="h-3 w-3" /> Excluded
+            </div>
+            <div className="text-2xl font-bold tabular-nums mt-1 text-amber-400">{excluded.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button asChild className="gap-2">
+          <a href={api.exportUrl(job.id, "jsonl")} download>
+            <FileText className="h-4 w-4" /> Download JSONL
+          </a>
+        </Button>
+        <Button asChild variant="outline" className="gap-2">
+          <a href={api.exportUrl(job.id, "json")} download>
+            <FileJson className="h-4 w-4" /> Download JSON
+          </a>
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Preview · JSONL</CardTitle>
+          <CardDescription>First 10 eligible rows</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : eligible.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No eligible rows yet. Run the pipeline and review units.
+            </p>
+          ) : (
+            <ScrollArea className="h-[420px]">
+              <pre className="text-[11px] font-mono leading-relaxed p-3 space-y-2">
+                {eligible.slice(0, 10).map((f) => (
+                  <div
+                    key={f.id}
+                    className={cn(
+                      "p-2 rounded border border-border/40 bg-muted/30",
+                      f.reviewerAction === "edit" && "border-teal-400/30",
+                      f.reviewerAction === "accept" && "border-emerald-500/20"
+                    )}
+                  >
+                    {JSON.stringify({ ...f.payload, reviewed_by: f.reviewedBy, reviewer_action: f.reviewerAction ?? "auto" })}
+                  </div>
+                ))}
+              </pre>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Excluded rows */}
+      {excluded.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Filter className="h-4 w-4 text-amber-400" /> Excluded rows
+            </CardTitle>
+            <CardDescription>Rejected or unreviewed human-routed units — not in the export.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {excluded.map((f) => (
+                <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/60 text-sm">
+                  <Badge variant="outline" className="font-mono text-[10px]">#{f.seq}</Badge>
+                  <span className="flex-1 truncate">{f.payload.chapter}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {f.reviewerAction === "reject" ? "rejected" : "unreviewed"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
