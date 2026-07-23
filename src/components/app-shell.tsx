@@ -15,6 +15,7 @@ import {
   GitBranch,
   Sparkles,
   TableProperties,
+  GitCompare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -26,6 +27,7 @@ const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?
   { key: "units", label: "Annotated Units", icon: TableProperties },
   { key: "review", label: "Review Queue", icon: GitBranch },
   { key: "quality", label: "Quality", icon: Gauge },
+  { key: "compare", label: "Compare Jobs", icon: GitCompare },
   { key: "export", label: "Export", icon: Download },
 ];
 

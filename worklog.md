@@ -139,3 +139,39 @@ Stage Summary:
 - Enhanced styling: new animations, card hover effects, glassmorphism utilities, gradient text
 - All views verified working via agent-browser + VLM
 - 0 lint errors
+
+---
+Task ID: 12
+Agent: main (cron review round 3)
+Task: QA testing, new features (Bloom radar, Language donut, Confidence by chapter, Job Comparison view), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry working correctly — transient server OOM restarts now show graceful retry UI instead of crash screens.
+- NEW FEATURE: "Compare Jobs" view (8th sidebar nav item, src/components/views/compare-view.tsx):
+  - Best-job banner (highest auto-accept rate) with trophy icon
+  - Side-by-side metrics table (Job, Units, Auto, Human, Auto %, Avg Conf, κ Chapter, Honeypot pass/fail)
+  - 4 comparison bar charts: Auto vs Human rate (stacked), Average confidence (color-coded by threshold), Inter-annotator agreement (Fleiss κ), Honeypot results (pass/fail stacked)
+  - New /api/compare API route computing cross-job stats
+- NEW FEATURE: Bloom's taxonomy distribution radar chart in Quality dashboard — shows cognitive complexity (remember/understand/apply/analyze) across all units
+- NEW FEATURE: Language distribution donut chart in Quality dashboard — en/hi/hinglish split with inner radius
+- NEW FEATURE: Confidence by chapter bar chart in Quality dashboard — avg confidence per chapter, sorted high→low, color-coded by threshold (emerald≥0.85, amber≥0.6, rose<0.6)
+- Updated quality API to return bloom distribution, language distribution, and avgConfByChapter
+- Updated QualityStats type with new fields (distributions.bloom, distributions.language, avgConfByChapter)
+- STYLING IMPROVEMENTS:
+  - Overview hero: animated gradient blob (blur-3xl + pulse), feature pills ("k=3 self-consistency", "critic-gated", "honeypot-verified", "weakest-link scoring"), "Browse jobs" secondary button, animate-fade-in
+  - New reusable Skeleton/CardSkeleton/TableSkeleton components for loading states
+  - Compare view: best-job banner with glow-emerald, color-coded table values, 4 rich chart cards
+- ESLint: 0 errors, 3 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Overview: hero with feature pills, 5 stat cards, pipeline diagram ✓
+  - Compare Jobs: best-job banner, side-by-side table, all 4 charts (Auto/Human, Avg confidence, Fleiss κ, Honeypot) ✓
+  - Quality: KPI cards, kappa bars, honeypot scores, Bloom's radar, Language donut, Confidence by chapter ✓
+
+Stage Summary:
+- Added 8th view: "Compare Jobs" — cross-job comparison with table + 4 charts
+- Added 3 new Quality dashboard visualizations: Bloom radar, Language donut, Confidence by chapter
+- Enhanced overview hero with animated gradient + feature pills
+- Added skeleton loading components
+- All 8 views verified working via agent-browser + VLM
+- 0 lint errors
+- App now has 8 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Quality, Compare Jobs, Export

@@ -81,6 +81,32 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     distChapter[p.chapter] = (distChapter[p.chapter] ?? 0) + 1;
   }
 
+  // ---- Bloom distribution ----
+  const distBloom: Record<string, number> = { remember: 0, understand: 0, apply: 0, analyze: 0 };
+  for (const f of finals) {
+    const p = JSON.parse(f.payload) as { bloom: string };
+    distBloom[p.bloom] = (distBloom[p.bloom] ?? 0) + 1;
+  }
+
+  // ---- Language distribution ----
+  const distLanguage: Record<string, number> = { en: 0, hi: 0, hinglish: 0 };
+  for (const f of finals) {
+    const p = JSON.parse(f.payload) as { language: string };
+    distLanguage[p.language] = (distLanguage[p.language] ?? 0) + 1;
+  }
+
+  // ---- Avg confidence by chapter ----
+  const confByChapter: Record<string, { sum: number; count: number }> = {};
+  for (const f of finals) {
+    const p = JSON.parse(f.payload) as { chapter: string };
+    confByChapter[p.chapter] ??= { sum: 0, count: 0 };
+    confByChapter[p.chapter].sum += f.confidence;
+    confByChapter[p.chapter].count++;
+  }
+  const avgConfByChapter = Object.entries(confByChapter)
+    .map(([chapter, v]) => ({ chapter: chapter.length > 22 ? chapter.slice(0, 20) + "…" : chapter, avg: v.sum / v.count, count: v.count }))
+    .sort((a, b) => b.avg - a.avg);
+
   return NextResponse.json({
     job: { id: job.id, filename: job.filename, status: job.status, unitCount: job.unitCount },
     totals: {
@@ -111,11 +137,15 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     distributions: {
       difficulty: distDifficulty,
       chapter: distChapter,
+      bloom: distBloom,
+      language: distLanguage,
     },
     // per-agent latency stats (attempt 1 only)
     latency: computeLatency(drafts),
     // confidence distribution buckets
     confidenceBuckets: computeConfidenceBuckets(finals),
+    // avg confidence by chapter (sorted desc)
+    avgConfByChapter,
   });
 }
 

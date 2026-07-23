@@ -64,4 +64,5 @@ export const api = {
     jfetch<{ ok: boolean }>(`/api/units/${unitId}/review`, { method: "POST", body: JSON.stringify(body) }),
   getQuality: (id: string) => jfetch<QualityStats>(`/api/jobs/${id}/quality`),
   exportUrl: (id: string, format: "jsonl" | "json" = "jsonl") => `/api/jobs/${id}/export?format=${format}`,
+  compareJobs: () => jfetch<{ jobs: JobComparison[] }>("/api/compare"),
 };

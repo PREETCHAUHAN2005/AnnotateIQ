@@ -13,9 +13,10 @@ const PipelineView = dynamic(() => import("@/components/views/pipeline-view").th
 const UnitsView = dynamic(() => import("@/components/views/units-view").then((m) => m.UnitsView), { ssr: false });
 const ReviewView = dynamic(() => import("@/components/views/review-view").then((m) => m.ReviewView), { ssr: false });
 const QualityView = dynamic(() => import("@/components/views/quality-view").then((m) => m.QualityView), { ssr: false });
+const CompareView = dynamic(() => import("@/components/views/compare-view").then((m) => m.CompareView), { ssr: false });
 const ExportView = dynamic(() => import("@/components/views/export-view").then((m) => m.ExportView), { ssr: false });
 
-export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "quality" | "export";
+export type ViewKey = "overview" | "jobs" | "pipeline" | "units" | "review" | "quality" | "compare" | "export";
 
 export default function Home() {
   const [view, setView] = useState<ViewKey>("overview");
@@ -106,6 +107,7 @@ export default function Home() {
       {view === "quality" && !activeJob && (
         <EmptyState message="Select a job to view quality." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
+      {view === "compare" && <CompareView />}
       {view === "export" && activeJob && <ExportView job={activeJob} />}
       {view === "export" && !activeJob && (
         <EmptyState message="Select a job to export." action={() => setView("jobs")} actionLabel="Go to Jobs" />

@@ -122,9 +122,12 @@ export type QualityStats = {
   distributions: {
     difficulty: Record<string, number>;
     chapter: Record<string, number>;
+    bloom: Record<string, number>;
+    language: Record<string, number>;
   };
   latency: Record<string, { avg: number; min: number; max: number; count: number; p95: number }>;
   confidenceBuckets: { label: string; count: number }[];
+  avgConfByChapter: { chapter: string; avg: number; count: number }[];
 };
 
 export type PipelineEvent = {
@@ -132,4 +135,23 @@ export type PipelineEvent = {
   jobId: string;
   ts: number;
   data: Record<string, unknown>;
+};
+
+export type JobComparison = {
+  id: string;
+  filename: string;
+  status: string;
+  unitCount: number;
+  finals: number;
+  auto: number;
+  human: number;
+  reviewed: number;
+  autoRate: number;
+  avgConfidence: number;
+  honeypots: number;
+  honeypotPass: number;
+  honeypotFail: number;
+  honeypotAccuracy: number;
+  kappaChapter: { value: number; label: string; tone: "good" | "warn" | "bad" };
+  distDifficulty: Record<string, number>;
 };

@@ -20,6 +20,11 @@ import {
   Cell,
   Legend,
   CartesianGrid,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from "recharts";
 import {
   Gauge,
@@ -32,10 +37,14 @@ import {
   Bot,
   RefreshCw,
   Loader2,
+  Brain,
+  Languages,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PIE_COLORS = ["#10b981", "#f59e0b", "#f43f5e", "#8b5cf6", "#06b6d4", "#ec4899"];
+const LANG_COLORS = ["#10b981", "#f59e0b", "#8b5cf6"];
 
 export function QualityView({ job }: { job: Job }) {
   const [stats, setStats] = useState<QualityStats | null>(null);
@@ -81,6 +90,9 @@ export function QualityView({ job }: { job: Job }) {
   const chapterData = Object.entries(stats.distributions.chapter)
     .map(([name, value]) => ({ name: name.length > 22 ? name.slice(0, 20) + "…" : name, fullName: name, value }))
     .sort((a, b) => b.value - a.value);
+  const bloomData = Object.entries(stats.distributions.bloom ?? {}).map(([name, value]) => ({ name, value }));
+  const langData = Object.entries(stats.distributions.language ?? {}).map(([name, value]) => ({ name, value }));
+  const avgConfData = stats.avgConfByChapter ?? [];
 
   return (
     <div className="space-y-5">
@@ -241,6 +253,97 @@ export function QualityView({ job }: { job: Job }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Bloom radar + Language donut */}
+      <div className="grid lg:grid-cols-2 gap-5">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary" /> Bloom&apos;s taxonomy distribution
+            </CardTitle>
+            <CardDescription>Cognitive complexity of annotated units</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={bloomData} cx="50%" cy="50%" outerRadius="75%">
+                  <PolarGrid stroke="oklch(1 0 0 / 10%)" />
+                  <PolarAngleAxis dataKey="name" tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 11 }} />
+                  <PolarRadiusAxis tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 9 }} angle={90} />
+                  <Radar dataKey="value" stroke="oklch(0.72 0.17 162)" fill="oklch(0.72 0.17 162)" fillOpacity={0.4} />
+                  <Tooltip contentStyle={{ background: "oklch(0.205 0.018 250)", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Languages className="h-4 w-4 text-primary" /> Language distribution
+            </CardTitle>
+            <CardDescription>en / hi / hinglish split</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={langData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    label={(e) => `${e.name}: ${e.value}`}
+                  >
+                    {langData.map((_, i) => (
+                      <Cell key={i} fill={LANG_COLORS[i % LANG_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: "oklch(0.205 0.018 250)", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Avg confidence by chapter */}
+      {avgConfData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Confidence by chapter
+            </CardTitle>
+            <CardDescription>Average confidence score per chapter (sorted high → low)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={avgConfData} layout="vertical" margin={{ left: 20, right: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
+                  <XAxis type="number" domain={[0, 1]} tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 11 }} />
+                  <YAxis type="category" dataKey="chapter" width={130} tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 10 }} />
+                  <Tooltip
+                    contentStyle={{ background: "oklch(0.205 0.018 250)", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
+                    cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+                    formatter={(v: number) => [v.toFixed(3), "avg confidence"]}
+                  />
+                  <Bar dataKey="avg" radius={[0, 4, 4, 0]}>
+                    {avgConfData.map((d, i) => (
+                      <Cell key={i} fill={d.avg >= 0.85 ? "oklch(0.72 0.17 162)" : d.avg >= 0.6 ? "oklch(0.78 0.16 85)" : "oklch(0.66 0.22 25)"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Agent latency + confidence distribution */}
       <div className="grid lg:grid-cols-2 gap-5">
