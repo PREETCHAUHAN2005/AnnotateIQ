@@ -68,6 +68,7 @@ export function PipelineView({
   const [humanCount, setHumanCount] = useState(0);
   const [running, setRunning] = useState(false);
   const [rerunning, setRerunning] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [pulse, setPulse] = useState<Record<string, number>>({});
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -201,6 +202,7 @@ export function PipelineView({
     setHumanCount(0);
     setTotalAgents({});
     setRunning(true);
+    setShowConfirm(false);
     try {
       await api.runPipeline(job.id);
       toast.success("Pipeline started");
@@ -208,6 +210,10 @@ export function PipelineView({
       toast.error(e instanceof Error ? e.message : "Failed to start");
       setRunning(false);
     }
+  };
+
+  const handleRunClick = () => {
+    setShowConfirm(true);
   };
 
   const rerunPipeline = async () => {
@@ -237,7 +243,7 @@ export function PipelineView({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="font-mono text-xs">{job.filename}</Badge>
-          <Button onClick={runPipeline} disabled={running || rerunning} className="gap-2">
+          <Button onClick={handleRunClick} disabled={running || rerunning} className="gap-2">
             {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             {running ? "Running…" : "Run pipeline"}
           </Button>
@@ -423,6 +429,57 @@ export function PipelineView({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Run confirmation dialog */}
+      {showConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowConfirm(false)}
+        >
+          <Card className="max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-primary/10 p-3">
+                  <Play className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Run the pipeline?</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{job.filename}</p>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <span className="text-muted-foreground">Units to process</span>
+                  <span className="font-mono font-bold">{job.unitCount}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <span className="text-muted-foreground">Agent calls per unit</span>
+                  <span className="font-mono font-bold">8 + 1 critic</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <span className="text-muted-foreground">Total agent calls</span>
+                  <span className="font-mono font-bold">{job.unitCount * 9}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <span className="text-primary">Est. time</span>
+                  <span className="font-mono font-bold text-primary">~{Math.ceil(job.unitCount * 0.5)} min</span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                The pipeline will fan out 8 parallel agents per unit, merge results, run the critic, and route based on confidence (≥0.85 → auto, &lt;0.85 → human).
+              </div>
+              <div className="flex gap-2 justify-end pt-2 border-t border-border/60">
+                <Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={runPipeline} className="gap-1.5">
+                  <Play className="h-3.5 w-3.5" /> Run now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

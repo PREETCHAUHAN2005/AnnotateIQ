@@ -409,3 +409,40 @@ Stage Summary:
 - Added Pipeline Health widget with live system metrics on Overview
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 19
+Agent: main (cron review round 10)
+Task: QA testing, new features (export copy-to-clipboard, sidebar shortcut hints, run confirmation dialog), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: Export preview with copy-to-clipboard + syntax highlighting:
+  - "Copy JSONL" button copies all eligible rows to clipboard
+  - JSON syntax highlighting in preview: keys (primary), strings (amber), numbers (teal), booleans/null (violet)
+  - Toast notification on successful copy
+  - Button state changes to "Copied!" with checkmark for 2 seconds
+- NEW FEATURE: Keyboard shortcut hint badges on sidebar nav items:
+  - Each nav button shows its "g + key" shortcut (e.g., "g o" for Overview)
+  - Active item shows hint permanently; inactive items show on hover
+  - Active indicator bar (vertical green bar) on the left of the selected nav item
+- NEW FEATURE: Run Pipeline confirmation dialog:
+  - Shows when clicking "Run pipeline" button
+  - Displays: units to process, agent calls per unit (8+1 critic), total agent calls, estimated time
+  - Description of pipeline operation (fan-out, merge, critic, route)
+  - Cancel and "Run now" buttons
+- STYLING IMPROVEMENTS:
+  - Sidebar: relative positioning for active indicator bar, keyboard shortcut kbd badges with bg-muted styling
+  - Export view: syntax-highlighted JSON preview with color-coded value types
+  - Pipeline view: confirmation dialog with primary/5 border on est. time row
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Sidebar: keyboard shortcut hints visible ("g o", "g j", etc.), active indicator bar on selected item ✓
+  - Pipeline confirmation dialog: "Run the pipeline?" with 8 units, 72 total agent calls, ~4 min est. time, Cancel/Run now buttons ✓
+
+Stage Summary:
+- Added export copy-to-clipboard with syntax-highlighted JSON preview
+- Added keyboard shortcut hint badges + active indicator bar on sidebar nav
+- Added run-pipeline confirmation dialog with estimated time and agent call breakdown
+- 0 lint errors
+- All new features verified working via agent-browser + VLM

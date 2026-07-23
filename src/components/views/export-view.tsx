@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, FileJson, FileText, FileSpreadsheet, Loader2, CheckCircle2, Filter } from "lucide-react";
+import { Download, FileJson, FileText, FileSpreadsheet, Loader2, CheckCircle2, Filter, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ExportView({ job }: { job: Job }) {
   const [finals, setFinals] = useState<FinalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api
@@ -29,6 +30,20 @@ export function ExportView({ job }: { job: Job }) {
   const excluded = finals.filter(
     (f) => !(f.route === "auto" || f.reviewerAction === "accept" || f.reviewerAction === "edit")
   );
+
+  const copyToClipboard = async () => {
+    const jsonl = eligible
+      .map((f) => JSON.stringify({ ...f.payload, reviewed_by: f.reviewedBy, reviewer_action: f.reviewerAction ?? "auto" }))
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(jsonl);
+      setCopied(true);
+      toast.success(`Copied ${eligible.length} rows to clipboard`);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -123,8 +138,23 @@ export function ExportView({ job }: { job: Job }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Preview · JSONL</CardTitle>
-          <CardDescription>First 10 eligible rows</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Preview · JSONL</CardTitle>
+              <CardDescription>First 10 eligible rows</CardDescription>
+            </div>
+            {eligible.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyToClipboard}
+                className="gap-1.5 shrink-0"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copied!" : "Copy JSONL"}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -138,18 +168,29 @@ export function ExportView({ job }: { job: Job }) {
           ) : (
             <ScrollArea className="h-[420px]">
               <pre className="text-[11px] font-mono leading-relaxed p-3 space-y-2">
-                {eligible.slice(0, 10).map((f) => (
-                  <div
-                    key={f.id}
-                    className={cn(
-                      "p-2 rounded border border-border/40 bg-muted/30",
-                      f.reviewerAction === "edit" && "border-teal-400/30",
-                      f.reviewerAction === "accept" && "border-emerald-500/20"
-                    )}
-                  >
-                    {JSON.stringify({ ...f.payload, reviewed_by: f.reviewedBy, reviewer_action: f.reviewerAction ?? "auto" })}
-                  </div>
-                ))}
+                {eligible.slice(0, 10).map((f) => {
+                  const jsonStr = JSON.stringify({ ...f.payload, reviewed_by: f.reviewedBy, reviewer_action: f.reviewerAction ?? "auto" }, null, 2);
+                  return (
+                    <div
+                      key={f.id}
+                      className={cn(
+                        "p-2 rounded border border-border/40 bg-muted/30",
+                        f.reviewerAction === "edit" && "border-teal-400/30",
+                        f.reviewerAction === "accept" && "border-emerald-500/20"
+                      )}
+                    >
+                      <span className="text-muted-foreground">{"{"}</span>
+                      <br />
+                      {Object.entries({ ...f.payload, reviewed_by: f.reviewedBy, reviewer_action: f.reviewerAction ?? "auto" }).map(([k, v], i, arr) => (
+                        <span key={k}>
+                          {"  "}<span className="text-primary">"{k}"</span>: <span className={cn(typeof v === "string" ? "text-amber-400" : typeof v === "number" ? "text-teal-400" : "text-violet-400")}>{JSON.stringify(v)}</span>{i < arr.length - 1 ? "," : ""}
+                          <br />
+                        </span>
+                      ))}
+                      <span className="text-muted-foreground">{"}"}</span>
+                    </div>
+                  );
+                })}
               </pre>
             </ScrollArea>
           )}
