@@ -195,3 +195,30 @@ export type TaxonomyStats = {
   totalQuestions: number;
   chapters: ChapterStat[];
 };
+
+export type ActivityEvent = {
+  id: string;
+  type: string;
+  jobId: string;
+  unitId: string | null;
+  seq: number | null;
+  stem?: string | null;
+  jobFilename?: string | null;
+  kind: string;
+  detail: string | null;
+  createdAt: string;
+};
+
+export type SearchResult = {
+  finalId: string;
+  jobId: string;
+  unitId: string;
+  seq: number;
+  isHoneypot: boolean;
+  payload: UnitAnnotation;
+  confidence: number;
+  agreement: number;
+  route: "auto" | "human";
+  reviewerAction: string | null;
+  matchedFields: string[];
+};

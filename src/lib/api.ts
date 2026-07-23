@@ -1,4 +1,5 @@
 import type {
+  ActivityEvent,
   Draft,
   FinalRecord,
   HoneypotResult,
@@ -6,6 +7,7 @@ import type {
   JobComparison,
   QualityStats,
   ReviewItem,
+  SearchResult,
   TaxonomyStats,
   Unit,
 } from "@/lib/types";
@@ -72,4 +74,9 @@ export const api = {
   deleteJob: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}`, { method: "DELETE" }),
   resetJob: (id: string) => jfetch<{ ok: boolean }>(`/api/jobs/${id}/reset`, { method: "POST" }),
   getTaxonomy: () => jfetch<TaxonomyStats>("/api/taxonomy"),
+  getActivity: (jobId?: string, kind?: string) =>
+    jfetch<{ events: ActivityEvent[]; total: number; kinds: string[] }>(
+      `/api/activity${jobId ? `?jobId=${jobId}` : ""}${kind ? `${jobId ? "&" : "?"}kind=${kind}` : ""}`
+    ),
+  search: (q: string) => jfetch<{ results: SearchResult[]; total: number; query: string }>(`/api/search?q=${encodeURIComponent(q)}`),
 };

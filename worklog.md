@@ -297,3 +297,45 @@ Stage Summary:
 - App now has 11 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Taxonomy, Architecture, Export
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 16
+Agent: main (cron review round 7)
+Task: QA testing, new features (Activity Timeline, Global Search), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: "Activity" view (12th sidebar nav item, src/components/views/activity-view.tsx):
+  - Chronological event log across all jobs (quality events + job creation events)
+  - Auto-refreshes every 8 seconds
+  - Filter chips by event kind: All, Job created, Honeypot passed/failed, Critic failed, Schema failed, Agent disagreement, Retry
+  - Each filter chip shows count of that event type
+  - Timeline with vertical connector lines, color-coded event icons
+  - Event cards show: type label, unit #badge, job filename, stem excerpt, JSON detail, timestamp
+  - Animated fade-in with staggered delay per event
+  - New /api/activity API route merging quality events + job creation events
+- NEW FEATURE: "Global Search" view (13th sidebar nav item, src/components/views/search-view.tsx):
+  - Debounced search (300ms) across all annotated units
+  - Searches: stem, chapter, concepts, difficulty, bloom, language, LaTeX
+  - Suggestion chips for quick queries (motion, rotational, easy, hard, hinglish, etc.)
+  - Result cards with: route badge (auto/human), unit #badge, honeypot flag, matched field badges, highlighted query in stem, chapter/difficulty/bloom/language tags
+  - Query highlighting with <mark> tags
+  - Empty state and no-results state
+  - New /api/search API route with multi-token matching
+- Updated command palette + keyboard shortcuts to include Activity (g+y) and Search (g+s)
+- STYLING IMPROVEMENTS:
+  - Activity view: timeline with vertical connector lines, staggered animation delays, color-coded event cards
+  - Search view: highlighted query matches, card-hover effects, suggestion chips with hover transitions
+- Fixed lint error: setState-in-effect in search-view (moved setLoading inside setTimeout)
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Overview: 13 nav items ✓
+  - Activity Timeline: 21 events, filter chips (Job created 3, Honeypot passed 1, Honeypot failed 2, Agent disagreement 15), chronological event cards with timestamps and JSON detail ✓
+  - Global Search: search input, suggestion chips, empty state, API returns 6 results for "motion" ✓
+
+Stage Summary:
+- Added 12th view: "Activity Timeline" — chronological event log with filtering and auto-refresh
+- Added 13th view: "Global Search" — debounced full-text search across all units with query highlighting
+- App now has 13 sidebar nav views: Overview, Jobs & Upload, Live Pipeline, Annotated Units, Review Queue, Honeypot Inspector, Quality, Compare Jobs, Taxonomy, Global Search, Activity, Architecture, Export
+- 0 lint errors
+- All new features verified working via agent-browser + VLM
