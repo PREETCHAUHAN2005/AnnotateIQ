@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { AppShell } from "@/components/app-shell";
@@ -147,6 +148,14 @@ export default function Home() {
       onRefreshJobs={refreshJobs}
       loadingJobs={loadingJobs}
     >
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={view}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
       {view === "overview" && (
         <OverviewView
           jobs={jobs}
@@ -196,6 +205,8 @@ export default function Home() {
       {view === "export" && !activeJob && (
         <EmptyState message="Select a job to export." action={() => setView("jobs")} actionLabel="Go to Jobs" />
       )}
+      </motion.div>
+      </AnimatePresence>
     </AppShell>
     <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onViewChange={setView} />
     <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />

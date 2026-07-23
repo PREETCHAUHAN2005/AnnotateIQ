@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PipelineHealth } from "@/components/pipeline-health";
+import { RecentActivityWidget } from "@/components/recent-activity-widget";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
   Atom,
@@ -149,6 +150,9 @@ export function OverviewView({
           )}
         </CardContent>
       </Card>
+
+      {/* Recent activity widget */}
+      <RecentActivityWidget />
     </div>
   );
 }

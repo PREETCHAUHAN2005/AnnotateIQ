@@ -446,3 +446,42 @@ Stage Summary:
 - Added run-pipeline confirmation dialog with estimated time and agent call breakdown
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 20
+Agent: main (cron review round 11)
+Task: QA testing, new features (theme toggle, recent activity widget, framer-motion page transitions), styling improvements
+
+Work Log:
+- QA tested all views via agent-browser. ErrorBoundary + API retry continue to handle transient server OOM restarts gracefully.
+- NEW FEATURE: Dark/Light theme toggle (src/components/theme-toggle.tsx + theme-provider.tsx):
+  - Sun/Moon icon button in header (next to refresh)
+  - Uses next-themes for class-based theme switching
+  - Dark theme is default; light theme uses oklch color tokens already defined in globals.css
+  - ThemeProvider wraps the app in layout.tsx
+  - Mounted state prevents hydration mismatch
+- NEW FEATURE: Recent Activity widget on Overview (src/components/recent-activity-widget.tsx):
+  - Shows latest 8 events across all jobs with icons, descriptions, and timestamps
+  - Color-coded event type icons (emerald=pass, rose=fail, amber=disagreement, etc.)
+  - Auto-refreshes every 10 seconds
+  - ScrollArea with hover transitions
+- NEW FEATURE: Framer-motion page transitions:
+  - AnimatePresence with mode="wait" wraps view content
+  - motion.div with key=view for smooth transitions (fade + slide up on enter, fade + slide down on exit)
+  - 200ms ease-out transition duration
+- STYLING IMPROVEMENTS:
+  - Theme toggle: sun icon in dark mode, moon icon in light mode
+  - Overview: Recent Activity widget with card-hover, scrollable event list
+  - Page transitions: smooth fade + slide between all 14 views
+- Fixed lint error: setState-in-effect in theme-toggle (moved to setTimeout)
+- ESLint: 0 errors, 4 warnings (unused eslint-disable — cosmetic)
+- Verified via agent-browser + VLM:
+  - Theme toggle: sun icon visible in dark mode, successfully switched to light mode (white background), moon icon visible in light mode ✓
+  - Recent Activity widget: "Recent Activity" title, list of events (disagreement #8, #6) with timestamps ✓
+
+Stage Summary:
+- Added dark/light theme toggle with next-themes (sun/moon icons in header)
+- Added Recent Activity widget on Overview with auto-refresh
+- Added framer-motion page transitions between all 14 views (fade + slide)
+- 0 lint errors
+- All new features verified working via agent-browser + VLM

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
@@ -106,6 +107,7 @@ export function AppShell({
             >
               <RefreshCw className={cn("h-4 w-4", loadingJobs && "animate-spin")} />
             </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
