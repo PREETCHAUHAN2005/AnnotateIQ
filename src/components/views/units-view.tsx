@@ -211,7 +211,7 @@ export function UnitsView({ job }: { job: Job }) {
                       <td className="p-3 font-mono text-xs text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                           <span>#{f.seq}</span>
-                          {f.isHoneypot && <AlertTriangle className="h-3 w-3 text-amber-400" />}
+                          {f.isHoneypot && <AlertTriangle className="h-3 w-3 text-white/60" />}
                         </div>
                       </td>
                       <td className="p-3 max-w-xs">
@@ -238,11 +238,11 @@ export function UnitsView({ job }: { job: Job }) {
                       </td>
                       <td className="p-3 text-center">
                         {f.route === "auto" ? (
-                          <Badge variant="outline" className="gap-1 border-emerald-500/40 text-emerald-400">
+                          <Badge variant="outline" className="gap-1 border-white/30 text-white">
                             <CheckCircle2 className="h-3 w-3" /> auto
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="gap-1 border-amber-400/40 text-amber-400">
+                          <Badge variant="outline" className="gap-1 border-white/20 text-white/60">
                             <GitBranch className="h-3 w-3" /> human
                           </Badge>
                         )}
@@ -266,16 +266,16 @@ export function UnitsView({ job }: { job: Job }) {
                   <Hash className="h-4 w-4 text-primary" />
                   Unit #{selected.seq}
                   {selected.isHoneypot && (
-                    <Badge variant="outline" className="gap-1 border-amber-400/40 text-amber-400 ml-2">
+                    <Badge variant="outline" className="gap-1 border-white/20 text-white/60 ml-2">
                       <AlertTriangle className="h-3 w-3" /> honeypot
                     </Badge>
                   )}
                   {selected.route === "auto" ? (
-                    <Badge variant="outline" className="gap-1 border-emerald-500/40 text-emerald-400 ml-auto">
+                    <Badge variant="outline" className="gap-1 border-white/30 text-white ml-auto">
                       <CheckCircle2 className="h-3 w-3" /> auto-accepted
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="gap-1 border-amber-400/40 text-amber-400 ml-auto">
+                    <Badge variant="outline" className="gap-1 border-white/20 text-white/60 ml-auto">
                       <GitBranch className="h-3 w-3" /> human review
                     </Badge>
                   )}
@@ -341,7 +341,7 @@ export function UnitsView({ job }: { job: Job }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Agreement:</span>
-                    <span className="font-mono text-sm text-teal-400">{selected.agreement.toFixed(2)}</span>
+                    <span className="font-mono text-sm text-white/80">{selected.agreement.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -364,9 +364,9 @@ export function UnitsView({ job }: { job: Job }) {
 
 function MiniStat({ label, value, tone }: { label: string; value: string | number; tone?: "emerald" | "amber" | "teal" }) {
   const cls = {
-    emerald: "text-emerald-400",
-    amber: "text-amber-400",
-    teal: "text-teal-400",
+    emerald: "text-white",
+    amber: "text-white/60",
+    teal: "text-white/80",
   }[tone ?? "" as never] ?? "text-foreground";
   return (
     <div className="text-center px-3 py-1.5 rounded-lg bg-muted/40 border border-border/40">
@@ -387,8 +387,8 @@ function SortButton({ label, active, asc, onClick }: { label: string; active: bo
 
 function DiffBadge({ difficulty }: { difficulty: string }) {
   const cls = {
-    easy: "border-emerald-500/40 text-emerald-400 bg-emerald-500/5",
-    medium: "border-amber-400/40 text-amber-400 bg-amber-400/5",
+    easy: "border-white/30 text-white bg-white/5",
+    medium: "border-white/20 text-white/60 bg-white/5",
     hard: "border-rose-500/40 text-rose-400 bg-rose-500/5",
   }[difficulty] ?? "";
   return <Badge variant="outline" className={cn("text-xs capitalize", cls)}>{difficulty}</Badge>;
@@ -396,7 +396,7 @@ function DiffBadge({ difficulty }: { difficulty: string }) {
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = value * 100;
-  const color = value >= 0.85 ? "bg-emerald-500" : value >= 0.6 ? "bg-amber-400" : "bg-rose-500";
+  const color = value >= 0.85 ? "bg-white" : value >= 0.6 ? "bg-white/50" : "bg-rose-500";
   return (
     <div className="flex items-center gap-2 justify-end">
       <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">

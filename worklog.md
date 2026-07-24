@@ -485,3 +485,64 @@ Stage Summary:
 - Added framer-motion page transitions between all 14 views (fade + slide)
 - 0 lint errors
 - All new features verified working via agent-browser + VLM
+
+---
+Task ID: 21
+Agent: main
+Task: Match theme to Scale AI website (pure black, monochrome, high-contrast)
+
+Work Log:
+- Analyzed 3 Scale AI screenshots via VLM to extract exact theme characteristics:
+  - Background: Pure black (#000000 to #0A0A0B)
+  - Cards: Very dark charcoal (#0A0A0A to #111111)
+  - Borders: Thin light-gray (#333333 to #444444)
+  - Text: Headlines = pure white, Body = light gray (#A0A0A0), Labels = muted gray (#666666)
+  - Buttons: Primary = white bg + black text (inverted), Secondary = ghost/outline
+  - Palette: Monochrome black/white/gray, no colorful accents
+  - Style: Flat, no heavy gradients/shadows, high-contrast, minimalist, technical/blueprint vibe
+- Rewrote globals.css dark theme variables:
+  - --background: oklch(0 0 0) — pure black
+  - --card: oklch(0.06 0 0) — very dark charcoal
+  - --primary: oklch(0.96 0 0) — white (for inverted buttons)
+  - --primary-foreground: oklch(0 0 0) — black
+  - --border: oklch(0.2 0 0) — thin gray border
+  - --muted-foreground: oklch(0.6 0 0) — medium gray for body text
+  - --sidebar: oklch(0.04 0 0) — slightly different from bg for depth
+  - Charts: monochrome white/gray tones
+- Replaced all hardcoded colored classes across all view files:
+  - text-emerald-400 → text-white
+  - text-teal-400 → text-white/80
+  - text-amber-400 → text-white/60
+  - text-violet-400 → text-white/70
+  - bg-emerald-500 → bg-white (with opacity variants)
+  - bg-amber-400 → bg-white/50 (with opacity variants)
+  - border-emerald-500/40 → border-white/30
+  - border-amber-400/40 → border-white/20
+  - Chart fill/stroke colors: emerald → #ffffff, amber → #666666, teal → #888888
+  - PIE_COLORS, LANG_COLORS, DIFF_COLORS, BLOOM_COLORS → monochrome arrays
+  - Gradient stop colors → white/gray
+  - Tooltip backgrounds → #0a0a0a
+- Updated CSS utilities:
+  - glow effects → subtle white glows instead of colored
+  - text-gradient-emerald → white-to-gray gradient
+  - pulse-ring → white instead of emerald
+  - card-hover → border color change instead of shadow
+  - scrollbar → darker gray (oklch 0.25)
+  - bg-grid → more subtle (2.5% opacity)
+- Updated StatusDot component: emerald/amber → white/opacity
+- Updated StatCard tones: all → white with varying opacity
+- ESLint: 0 errors, 4 warnings
+- Verified via agent-browser + VLM:
+  - Background: pure black ✓
+  - Buttons: white with black text (inverted) ✓
+  - Palette: monochrome (black/white/gray) ✓
+  - Text: white headlines, gray body ✓
+  - Style: flat, high-contrast, minimalist, technical ✓
+
+Stage Summary:
+- Successfully matched the app's theme to the Scale AI website
+- Pure black background, monochrome palette, white inverted buttons, thin gray borders
+- All 14 views updated to use the monochrome theme
+- All chart colors updated to white/gray tones
+- Features and functionality unchanged — only the visual theme was modified
+- 0 lint errors

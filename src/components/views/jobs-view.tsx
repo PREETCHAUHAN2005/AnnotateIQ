@@ -268,8 +268,8 @@ function StatusPill({ status }: { status: string }) {
     pending: { label: "pending", cls: "bg-muted text-muted-foreground" },
     extracting: { label: "extracting", cls: "bg-primary/15 text-primary" },
     labeling: { label: "labeling", cls: "bg-primary/15 text-primary" },
-    review: { label: "review", cls: "bg-amber-400/15 text-amber-400" },
-    done: { label: "done", cls: "bg-emerald-500/15 text-emerald-400" },
+    review: { label: "review", cls: "bg-white/15 text-white/60" },
+    done: { label: "done", cls: "bg-white/15 text-white" },
     failed: { label: "failed", cls: "bg-rose-500/15 text-rose-400" },
   };
   const s = map[status] ?? map.pending;

@@ -31,8 +31,8 @@ export class ErrorBoundary extends React.Component<
       const isFetchError = this.state.error?.message?.includes("Failed to fetch");
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 p-8 text-center">
-          <div className="rounded-full bg-amber-400/10 p-4">
-            <AlertTriangle className="h-8 w-8 text-amber-400" />
+          <div className="rounded-full bg-white/10 p-4">
+            <AlertTriangle className="h-8 w-8 text-white/60" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">

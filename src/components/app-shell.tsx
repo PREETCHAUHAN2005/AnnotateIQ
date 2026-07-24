@@ -195,7 +195,7 @@ export function AppShell({
                               <span>·</span>
                               <span className="text-primary">{j.autoCount} auto</span>
                               <span>·</span>
-                              <span className="text-amber-400">{j.humanCount} human</span>
+                              <span className="text-white/60">{j.humanCount} human</span>
                             </>
                           ) : null}
                         </div>
@@ -248,13 +248,13 @@ export function AppShell({
 function StatusDot({ status }: { status: string }) {
   const color =
     status === "done"
-      ? "bg-emerald-500"
+      ? "bg-white"
       : status === "review"
-      ? "bg-amber-400"
+      ? "bg-white/50"
       : status === "labeling" || status === "extracting"
-      ? "bg-primary animate-pulse"
+      ? "bg-white animate-pulse"
       : status === "failed"
       ? "bg-rose-500"
-      : "bg-muted-foreground";
+      : "bg-white/25";
   return <span className={cn("h-2 w-2 rounded-full shrink-0", color)} />;
 }

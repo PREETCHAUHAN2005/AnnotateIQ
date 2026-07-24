@@ -391,13 +391,13 @@ export function PipelineView({
                   <span
                     className={cn(
                       "shrink-0 w-1.5 h-1.5 rounded-full mt-1.5",
-                      l.tone === "ok" && "bg-emerald-500",
-                      l.tone === "warn" && "bg-amber-400",
+                      l.tone === "ok" && "bg-white",
+                      l.tone === "warn" && "bg-white/50",
                       l.tone === "err" && "bg-rose-500",
                       l.tone === "info" && "bg-primary"
                     )}
                   />
-                  <span className={cn(l.tone === "err" && "text-rose-400", l.tone === "warn" && "text-amber-400")}>
+                  <span className={cn(l.tone === "err" && "text-rose-400", l.tone === "warn" && "text-white/60")}>
                     {l.text}
                   </span>
                 </div>
@@ -502,9 +502,9 @@ function DiagramNode({
 }) {
   const toneCls = {
     emerald: "border-primary/50 text-primary bg-primary/5",
-    teal: "border-teal-400/40 text-teal-400 bg-teal-400/5",
-    violet: "border-violet-400/40 text-violet-400 bg-violet-400/5",
-    amber: "border-amber-400/40 text-amber-400 bg-amber-400/5",
+    teal: "border-white/20 text-white/80 bg-white/5",
+    violet: "border-white/20 text-white/70 bg-white/5",
+    amber: "border-white/20 text-white/60 bg-white/5",
     muted: "border-border/60 text-muted-foreground bg-muted/30",
   }[tone];
   return (
@@ -539,10 +539,10 @@ function MiniStat({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   const toneCls = {
-    emerald: "text-emerald-400",
-    amber: "text-amber-400",
+    emerald: "text-white",
+    amber: "text-white/60",
     rose: "text-rose-400",
-    teal: "text-teal-400",
+    teal: "text-white/80",
   }[tone];
   return (
     <div className="flex items-center gap-2">
@@ -558,16 +558,16 @@ function MiniStat({
 function UnitChip({ unit }: { unit: UnitState }) {
   const tone =
     unit.route === "auto"
-      ? "border-emerald-500/40 bg-emerald-500/5"
+      ? "border-white/30 bg-white/5"
       : unit.route === "human"
-      ? "border-amber-400/40 bg-amber-400/5"
+      ? "border-white/20 bg-white/5"
       : unit.status === "labeling"
       ? "border-primary/40 bg-primary/5"
       : "border-border/60";
   return (
     <div className={cn("flex items-center gap-3 p-2.5 rounded-lg border text-sm", tone)}>
       <span className="font-mono text-xs text-muted-foreground w-8">#{unit.seq}</span>
-      {unit.isHoneypot && <AlertTriangle className="h-3 w-3 text-amber-400" />}
+      {unit.isHoneypot && <AlertTriangle className="h-3 w-3 text-white/60" />}
       <div className="flex-1 min-w-0">
         {unit.status === "labeling" && (
           <span className="text-xs text-primary flex items-center gap-1.5">
@@ -576,11 +576,11 @@ function UnitChip({ unit }: { unit: UnitState }) {
         )}
         {unit.status === "pending" && <span className="text-xs text-muted-foreground">pending</span>}
         {unit.status === "labeled" && unit.route && (
-          <span className={cn("text-xs", unit.route === "auto" ? "text-emerald-400" : "text-amber-400")}>
+          <span className={cn("text-xs", unit.route === "auto" ? "text-white" : "text-white/60")}>
             {unit.route === "auto" ? "auto-accept" : "human review"} · conf {unit.confidence?.toFixed(2)}
           </span>
         )}
-        {unit.status === "reviewed" && <span className="text-xs text-emerald-400">reviewed</span>}
+        {unit.status === "reviewed" && <span className="text-xs text-white">reviewed</span>}
       </div>
       <span className="text-[10px] text-muted-foreground font-mono">{unit.draftCount} drafts</span>
     </div>

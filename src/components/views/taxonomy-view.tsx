@@ -116,26 +116,26 @@ export function TaxonomyView() {
             <div className="text-2xl font-bold tabular-nums">{stats.totalChapters}</div>
           </CardContent>
         </Card>
-        <Card className="border-emerald-500/20 card-hover">
+        <Card className="border-white/20 card-hover">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-emerald-400 uppercase tracking-wider">Covered</span>
-              <div className="rounded-md p-1.5 bg-emerald-500/10 text-emerald-400">
+              <span className="text-xs text-white uppercase tracking-wider">Covered</span>
+              <div className="rounded-md p-1.5 bg-white/10 text-white">
                 <CheckCircle2 className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="text-2xl font-bold tabular-nums text-emerald-400">{stats.coveredChapters}</div>
+            <div className="text-2xl font-bold tabular-nums text-white">{stats.coveredChapters}</div>
           </CardContent>
         </Card>
         <Card className="border-amber-400/20 card-hover">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-amber-400 uppercase tracking-wider">Uncovered</span>
-              <div className="rounded-md p-1.5 bg-amber-400/10 text-amber-400">
+              <span className="text-xs text-white/60 uppercase tracking-wider">Uncovered</span>
+              <div className="rounded-md p-1.5 bg-white/10 text-white/60">
                 <Circle className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="text-2xl font-bold tabular-nums text-amber-400">{stats.totalChapters - stats.coveredChapters}</div>
+            <div className="text-2xl font-bold tabular-nums text-white/60">{stats.totalChapters - stats.coveredChapters}</div>
           </CardContent>
         </Card>
         <Card className="border-border/60 card-hover">
@@ -165,20 +165,20 @@ export function TaxonomyView() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={coverageData} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={130} tick={{ fill: "oklch(0.68 0.02 250)", fontSize: 10 }} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fill: "#888888", fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={130} tick={{ fill: "#888888", fontSize: 10 }} />
                   <Tooltip
-                    contentStyle={{ background: "oklch(0.205 0.018 250)", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
+                    contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
                     cursor={{ fill: "oklch(1 0 0 / 5%)" }}
                   />
-                  <Bar dataKey="auto" stackId="a" fill="oklch(0.72 0.17 162)" radius={[0, 0, 0, 4]} />
-                  <Bar dataKey="human" stackId="a" fill="oklch(0.78 0.16 85)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="auto" stackId="a" fill="#ffffff" radius={[0, 0, 0, 4]} />
+                  <Bar dataKey="human" stackId="a" fill="#666666" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> auto-accepted</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" /> human-routed</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-white" /> auto-accepted</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-white/50" /> human-routed</span>
             </div>
           </CardContent>
         </Card>
@@ -270,7 +270,7 @@ export function TaxonomyView() {
                     </div>
                     <div className="space-y-1">
                       <div className="text-xs text-muted-foreground">Auto-accept rate</div>
-                      <div className={cn("text-lg font-bold tabular-nums", selected.autoRate >= 0.5 ? "text-emerald-400" : "text-amber-400")}>
+                      <div className={cn("text-lg font-bold tabular-nums", selected.autoRate >= 0.5 ? "text-white" : "text-white/60")}>
                         {Math.round(selected.autoRate * 100)}%
                       </div>
                     </div>
@@ -289,7 +289,7 @@ export function TaxonomyView() {
                             <span className="text-xs w-16 capitalize">{d}</span>
                             <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                               <div
-                                className={cn("h-full", d === "easy" ? "bg-emerald-500" : d === "medium" ? "bg-amber-400" : "bg-rose-500")}
+                                className={cn("h-full", d === "easy" ? "bg-white" : d === "medium" ? "bg-white/50" : "bg-rose-500")}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -352,7 +352,7 @@ function ChapterCard({ chapter, onClick }: { chapter: ChapterStat; onClick: () =
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               {covered ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-white shrink-0" />
               ) : (
                 <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               )}
@@ -361,8 +361,8 @@ function ChapterCard({ chapter, onClick }: { chapter: ChapterStat; onClick: () =
             {covered ? (
               <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                 <span className="font-mono">{chapter.count} Q</span>
-                <span className="text-emerald-400">{chapter.autoCount} auto</span>
-                <span className="text-amber-400">{chapter.humanCount} human</span>
+                <span className="text-white">{chapter.autoCount} auto</span>
+                <span className="text-white/60">{chapter.humanCount} human</span>
               </div>
             ) : (
               <div className="text-[10px] text-muted-foreground">No questions yet</div>

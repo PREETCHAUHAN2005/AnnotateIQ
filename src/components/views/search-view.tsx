@@ -153,12 +153,12 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
           {/* Route badge */}
           <div className="shrink-0">
             {result.route === "auto" ? (
-              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <div className="rounded-lg bg-white/10 border border-white/25 p-2">
+                <CheckCircle2 className="h-4 w-4 text-white" />
               </div>
             ) : (
-              <div className="rounded-lg bg-amber-400/10 border border-amber-400/30 p-2">
-                <GitBranch className="h-4 w-4 text-amber-400" />
+              <div className="rounded-lg bg-white/10 border border-white/20 p-2">
+                <GitBranch className="h-4 w-4 text-white/60" />
               </div>
             )}
           </div>
@@ -170,7 +170,7 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
                 <Hash className="h-2.5 w-2.5" />#{result.seq}
               </Badge>
               {result.isHoneypot && (
-                <Badge variant="outline" className="text-[10px] gap-1 border-amber-400/40 text-amber-400">
+                <Badge variant="outline" className="text-[10px] gap-1 border-white/20 text-white/60">
                   <AlertTriangle className="h-2.5 w-2.5" /> honeypot
                 </Badge>
               )}
@@ -195,8 +195,8 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
               <span className="text-muted-foreground">·</span>
               <span className={cn(
                 "capitalize",
-                result.payload.difficulty === "easy" && "text-emerald-400",
-                result.payload.difficulty === "medium" && "text-amber-400",
+                result.payload.difficulty === "easy" && "text-white",
+                result.payload.difficulty === "medium" && "text-white/60",
                 result.payload.difficulty === "hard" && "text-rose-400",
               )}>
                 {result.payload.difficulty}

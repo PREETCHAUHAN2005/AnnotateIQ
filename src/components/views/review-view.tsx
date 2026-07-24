@@ -171,7 +171,7 @@ export function ReviewView({ job }: { job: Job }) {
                 variant="outline"
                 onClick={() => batchAction("accept")}
                 disabled={submitting}
-                className="gap-1.5 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                className="gap-1.5 border-white/30 text-white hover:bg-white/10"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" /> Accept all
               </Button>
@@ -196,7 +196,7 @@ export function ReviewView({ job }: { job: Job }) {
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
-            <Check className="h-10 w-10 text-emerald-400 mx-auto mb-3" />
+            <Check className="h-10 w-10 text-white mx-auto mb-3" />
             <p className="text-muted-foreground">No units routed to human review for this job.</p>
             <p className="text-xs text-muted-foreground mt-1">
               Run the pipeline first, or all units auto-accepted.
@@ -224,7 +224,7 @@ export function ReviewView({ job }: { job: Job }) {
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-muted-foreground">#{it.seq}</span>
-                        {it.isHoneypot && <AlertTriangle className="h-3 w-3 text-amber-400" />}
+                        {it.isHoneypot && <AlertTriangle className="h-3 w-3 text-white/60" />}
                         <div className="flex-1 min-w-0">
                           <div className="text-xs truncate">{it.payload.chapter}</div>
                         </div>
@@ -233,8 +233,8 @@ export function ReviewView({ job }: { job: Job }) {
                             variant="outline"
                             className={cn(
                               "text-[9px] px-1.5 py-0",
-                              it.reviewerAction === "accept" && "border-emerald-500/40 text-emerald-400",
-                              it.reviewerAction === "edit" && "border-teal-400/40 text-teal-400",
+                              it.reviewerAction === "accept" && "border-white/30 text-white",
+                              it.reviewerAction === "edit" && "border-white/20 text-white/80",
                               it.reviewerAction === "reject" && "border-rose-500/40 text-rose-400"
                             )}
                           >
@@ -264,7 +264,7 @@ export function ReviewView({ job }: { job: Job }) {
                     Item {idx + 1} of {items.length}
                   </span>
                   {current.isHoneypot && (
-                    <Badge variant="outline" className="gap-1 border-amber-400/40 text-amber-400">
+                    <Badge variant="outline" className="gap-1 border-white/20 text-white/60">
                       <AlertTriangle className="h-3 w-3" /> honeypot
                     </Badge>
                   )}
@@ -409,16 +409,16 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
   const Icon = icon;
 
   return (
-    <div className={cn("rounded-lg border", disagree ? "border-amber-400/40 bg-amber-400/5" : "border-border/60")}>
+    <div className={cn("rounded-lg border", disagree ? "border-white/20 bg-white/5" : "border-border/60")}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 p-2.5 text-left"
       >
-        <Icon className={cn("h-3.5 w-3.5", disagree ? "text-amber-400" : "text-muted-foreground")} />
+        <Icon className={cn("h-3.5 w-3.5", disagree ? "text-white/60" : "text-muted-foreground")} />
         <span className="text-xs font-semibold capitalize">{agent}</span>
         <span className="text-[10px] text-muted-foreground">· {drafts.length} sample{drafts.length !== 1 ? "s" : ""}</span>
         {disagree && (
-          <Badge variant="outline" className="text-[9px] ml-1 border-amber-400/40 text-amber-400 gap-1">
+          <Badge variant="outline" className="text-[9px] ml-1 border-white/20 text-white/60 gap-1">
             <AlertTriangle className="h-2.5 w-2.5" /> disagreed
           </Badge>
         )}
@@ -442,14 +442,14 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
                 {agent === "difficulty" && (
                   <div>
                     <span className="text-muted-foreground">sample {d.sampleIdx}:</span>{" "}
-                    <span className="text-teal-400">{String(p.difficulty)}</span>{" "}
+                    <span className="text-white/80">{String(p.difficulty)}</span>{" "}
                     <span className="text-muted-foreground">· {String(p.bloom)}</span>
                     <div className="text-muted-foreground mt-0.5 italic">"{String(p.difficulty_rationale).slice(0, 120)}"</div>
                   </div>
                 )}
                 {agent === "math" && (
                   <div>
-                    has_equation: <span className="text-amber-400">{String(p.has_equation)}</span>
+                    has_equation: <span className="text-white/60">{String(p.has_equation)}</span>
                     {Array.isArray(p.latex) && (p.latex as string[]).length > 0 && (
                       <div className="mt-0.5 text-primary">{(p.latex as string[]).join("  ·  ")}</div>
                     )}
@@ -457,13 +457,13 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
                 )}
                 {agent === "language" && (
                   <div>
-                    <span className="text-violet-400">{String(p.language)}</span>
+                    <span className="text-white/70">{String(p.language)}</span>
                     <span className="text-muted-foreground"> · code_mix {Number(p.code_mix_ratio).toFixed(2)}</span>
                   </div>
                 )}
                 {agent === "critic" && (
                   <div>
-                    passed: <span className={p.passed ? "text-emerald-400" : "text-rose-400"}>{String(p.passed)}</span>
+                    passed: <span className={p.passed ? "text-white" : "text-rose-400"}>{String(p.passed)}</span>
                     {Array.isArray(p.failures) && (p.failures as string[]).length > 0 && (
                       <div className="mt-0.5 text-rose-400">{(p.failures as string[]).join("; ")}</div>
                     )}
@@ -596,11 +596,11 @@ function AnnotationForm({
         </div>
         <div className="text-xs">
           <span className="text-muted-foreground">agreement:</span>{" "}
-          <span className="font-mono text-teal-400">{payload.agreement.toFixed(2)}</span>
+          <span className="font-mono text-white/80">{payload.agreement.toFixed(2)}</span>
         </div>
         <div className="text-xs">
           <span className="text-muted-foreground">route:</span>{" "}
-          <span className={cn("font-mono", payload.route === "auto" ? "text-emerald-400" : "text-amber-400")}>{payload.route}</span>
+          <span className={cn("font-mono", payload.route === "auto" ? "text-white" : "text-white/60")}>{payload.route}</span>
         </div>
       </div>
     </div>

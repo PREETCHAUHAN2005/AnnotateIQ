@@ -81,9 +81,9 @@ export function OverviewView({
                 {[
                   { label: "Ingest & segment", icon: Layers, tone: "text-muted-foreground" },
                   { label: "Fan-out · 8 agents/unit", icon: Cpu, tone: "text-primary" },
-                  { label: "Merge · weakest-link score", icon: GitBranch, tone: "text-teal-400" },
-                  { label: "Critic · rubric gate", icon: ShieldCheck, tone: "text-amber-400" },
-                  { label: "Confidence ≥ 0.85 → auto", icon: Gauge, tone: "text-emerald-400" },
+                  { label: "Merge · weakest-link score", icon: GitBranch, tone: "text-white/80" },
+                  { label: "Critic · rubric gate", icon: ShieldCheck, tone: "text-white/60" },
+                  { label: "Confidence ≥ 0.85 → auto", icon: Gauge, tone: "text-white" },
                 ].map((step, i) => {
                   const Icon = step.icon;
                   return (
@@ -168,12 +168,13 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
   tone: "primary" | "teal" | "emerald" | "amber" | "violet";
 }) {
+  // Scale AI monochrome — all tones use white with varying opacity
   const toneClass = {
-    primary: "text-primary",
-    teal: "text-teal-400",
-    emerald: "text-emerald-400",
-    amber: "text-amber-400",
-    violet: "text-violet-400",
+    primary: "text-white",
+    teal: "text-white/80",
+    emerald: "text-white/90",
+    amber: "text-white/60",
+    violet: "text-white/70",
   }[tone];
   return (
     <Card className="border-border/60 card-hover animate-fade-in">
@@ -197,8 +198,8 @@ function StatusPill({ status }: { status: string }) {
     pending: { label: "pending", cls: "bg-muted text-muted-foreground" },
     extracting: { label: "extracting", cls: "bg-primary/15 text-primary" },
     labeling: { label: "labeling", cls: "bg-primary/15 text-primary" },
-    review: { label: "review", cls: "bg-amber-400/15 text-amber-400" },
-    done: { label: "done", cls: "bg-emerald-500/15 text-emerald-400" },
+    review: { label: "review", cls: "bg-white/15 text-white/60" },
+    done: { label: "done", cls: "bg-white/15 text-white" },
     failed: { label: "failed", cls: "bg-rose-500/15 text-rose-400" },
   };
   const s = map[status] ?? map.pending;
