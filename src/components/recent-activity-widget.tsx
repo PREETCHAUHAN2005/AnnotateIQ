@@ -20,12 +20,12 @@ import { cn } from "@/lib/utils";
 
 const KIND_ICON: Record<string, { icon: React.ComponentType<{ className?: string }>; tone: string }> = {
   job_created: { icon: FileText, tone: "text-primary" },
-  honeypot_pass: { icon: CheckCircle2, tone: "text-white" },
+  honeypot_pass: { icon: CheckCircle2, tone: "text-foreground" },
   honeypot_fail: { icon: XCircle, tone: "text-rose-400" },
-  critic_fail: { icon: ShieldAlert, tone: "text-white/60" },
+  critic_fail: { icon: ShieldAlert, tone: "text-foreground/60" },
   schema_fail: { icon: AlertTriangle, tone: "text-rose-400" },
-  disagreement: { icon: GitBranch, tone: "text-white/60" },
-  retry: { icon: RotateCcw, tone: "text-white/70" },
+  disagreement: { icon: GitBranch, tone: "text-foreground/60" },
+  retry: { icon: RotateCcw, tone: "text-foreground/70" },
 };
 
 export function RecentActivityWidget() {

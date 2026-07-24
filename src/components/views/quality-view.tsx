@@ -43,8 +43,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const PIE_COLORS = ["#ffffff", "#cccccc", "#999999", "#666666", "#444444", "#f87171"];
-const LANG_COLORS = ["#ffffff", "#888888", "#555555"];
+const PIE_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "#f87171"];
+const LANG_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
 
 export function QualityView({ job }: { job: Job }) {
   const [stats, setStats] = useState<QualityStats | null>(null);
@@ -188,7 +188,7 @@ export function QualityView({ job }: { job: Job }) {
             ))}
             <Separator className="my-2" />
             <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5 text-white">
+              <span className="flex items-center gap-1.5 text-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5" /> {stats.honeypot.pass} pass
               </span>
               <span className="flex items-center gap-1.5 text-rose-400">
@@ -223,7 +223,7 @@ export function QualityView({ job }: { job: Job }) {
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -240,13 +240,13 @@ export function QualityView({ job }: { job: Job }) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chapterData} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis type="number" tick={{ fill: "#888888", fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={120} tick={{ fill: "#888888", fontSize: 10 }} />
+                  <XAxis type="number" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={120} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
                   <Tooltip
-                    contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
-                    cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+                    contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }}
+                    cursor={{ fill: "var(--accent)" }}
                   />
-                  <Bar dataKey="value" fill="#ffffff" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="value" fill="var(--foreground)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -268,10 +268,10 @@ export function QualityView({ job }: { job: Job }) {
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={bloomData} cx="50%" cy="50%" outerRadius="75%">
                   <PolarGrid stroke="oklch(1 0 0 / 10%)" />
-                  <PolarAngleAxis dataKey="name" tick={{ fill: "#888888", fontSize: 11 }} />
-                  <PolarRadiusAxis tick={{ fill: "#888888", fontSize: 9 }} angle={90} />
-                  <Radar dataKey="value" stroke="#ffffff" fill="#ffffff" fillOpacity={0.4} />
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <PolarAngleAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                  <PolarRadiusAxis tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} angle={90} />
+                  <Radar dataKey="value" stroke="var(--foreground)" fill="var(--foreground)" fillOpacity={0.4} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -303,7 +303,7 @@ export function QualityView({ job }: { job: Job }) {
                       <Cell key={i} fill={LANG_COLORS[i % LANG_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -326,16 +326,16 @@ export function QualityView({ job }: { job: Job }) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={avgConfData} layout="vertical" margin={{ left: 20, right: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis type="number" domain={[0, 1]} tick={{ fill: "#888888", fontSize: 11 }} />
-                  <YAxis type="category" dataKey="chapter" width={130} tick={{ fill: "#888888", fontSize: 10 }} />
+                  <XAxis type="number" domain={[0, 1]} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                  <YAxis type="category" dataKey="chapter" width={130} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
                   <Tooltip
-                    contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
-                    cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+                    contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }}
+                    cursor={{ fill: "var(--accent)" }}
                     formatter={(v: number) => [v.toFixed(3), "avg confidence"]}
                   />
                   <Bar dataKey="avg" radius={[0, 4, 4, 0]}>
                     {avgConfData.map((d, i) => (
-                      <Cell key={i} fill={d.avg >= 0.85 ? "#ffffff" : d.avg >= 0.6 ? "#888888" : "#f87171"} />
+                      <Cell key={i} fill={d.avg >= 0.85 ? "var(--foreground)" : d.avg >= 0.6 ? "var(--muted-foreground)" : "#f87171"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -397,15 +397,15 @@ export function QualityView({ job }: { job: Job }) {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.confidenceBuckets ?? []} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis dataKey="label" tick={{ fill: "#888888", fontSize: 10 }} />
-                  <YAxis allowDecimals={false} tick={{ fill: "#888888", fontSize: 11 }} />
+                  <XAxis dataKey="label" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }}
-                    cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+                    contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }}
+                    cursor={{ fill: "var(--accent)" }}
                   />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                     {(stats.confidenceBuckets ?? []).map((_, i) => (
-                      <Cell key={i} fill={["#f87171", "#666666", "#888888", "#cccccc", "#ffffff"][i % 5]} />
+                      <Cell key={i} fill={["#f87171", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--foreground)"][i % 5]} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -413,8 +413,8 @@ export function QualityView({ job }: { job: Job }) {
             </div>
             <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" /> low</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-white/50" /> medium</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-white" /> high (auto)</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-foreground/50" /> medium</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-foreground" /> high (auto)</span>
               <span className="ml-auto">threshold ≥ 0.85</span>
             </div>
           </CardContent>
@@ -425,7 +425,7 @@ export function QualityView({ job }: { job: Job }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-white/60" /> Quality events
+            <AlertTriangle className="h-4 w-4 text-foreground/60" /> Quality events
           </CardTitle>
           <CardDescription>Raw counts of every quality signal emitted</CardDescription>
         </CardHeader>
@@ -461,10 +461,10 @@ function KpiCard({
   tone: "emerald" | "teal" | "amber" | "violet";
 }) {
   const toneCls = {
-    emerald: "text-white bg-white/10",
-    teal: "text-white/80 bg-white/10",
-    amber: "text-white/60 bg-white/10",
-    violet: "text-white/70 bg-white/10",
+    emerald: "text-foreground bg-foreground/10",
+    teal: "text-foreground/80 bg-foreground/10",
+    amber: "text-foreground/60 bg-foreground/10",
+    violet: "text-foreground/70 bg-foreground/10",
   }[tone];
   return (
     <Card className="border-border/60">
@@ -491,7 +491,7 @@ function KappaBar({
 }) {
   const pct = Math.max(0, Math.min(100, kappa.value * 100));
   const barColor =
-    kappa.tone === "good" ? "bg-white" : kappa.tone === "warn" ? "bg-white/50" : "bg-rose-500";
+    kappa.tone === "good" ? "bg-foreground" : kappa.tone === "warn" ? "bg-foreground/50" : "bg-rose-500";
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
@@ -501,8 +501,8 @@ function KappaBar({
             variant="outline"
             className={cn(
               "text-[10px]",
-              kappa.tone === "good" && "border-white/30 text-white",
-              kappa.tone === "warn" && "border-white/20 text-white/60",
+              kappa.tone === "good" && "border-foreground/30 text-foreground",
+              kappa.tone === "warn" && "border-foreground/20 text-foreground/60",
               kappa.tone === "bad" && "border-rose-500/40 text-rose-400"
             )}
           >

@@ -63,8 +63,8 @@ export function PipelineHealth() {
   }
 
   const statusConfig = {
-    healthy: { label: "All systems operational", color: "text-white", bg: "bg-white/10", icon: CheckCircle2, dot: "bg-white" },
-    degraded: { label: "Some units need attention", color: "text-white/60", bg: "bg-white/10", icon: AlertTriangle, dot: "bg-white/50" },
+    healthy: { label: "All systems operational", color: "text-foreground", bg: "bg-foreground/10", icon: CheckCircle2, dot: "bg-foreground" },
+    degraded: { label: "Some units need attention", color: "text-foreground/60", bg: "bg-foreground/10", icon: AlertTriangle, dot: "bg-foreground/50" },
     down: { label: "System unavailable", color: "text-rose-400", bg: "bg-rose-500/10", icon: XCircle, dot: "bg-rose-500" },
   }[health.status];
 
@@ -101,21 +101,21 @@ export function PipelineHealth() {
             label="DB"
             value={health.dbConnected ? "UP" : "DOWN"}
             sub={health.dbConnected ? "connected" : "offline"}
-            tone={health.dbConnected ? "text-white" : "text-rose-400"}
+            tone={health.dbConnected ? "text-foreground" : "text-rose-400"}
           />
           <HealthMetric
             icon={Zap}
             label="Labeled"
             value={health.labeledUnits}
             sub={`of ${health.totalUnits}`}
-            tone="text-white/80"
+            tone="text-foreground/80"
           />
           <HealthMetric
             icon={Activity}
             label="Pending"
             value={health.pendingUnits}
             sub="in queue"
-            tone={health.pendingUnits > 0 ? "text-white/60" : "text-muted-foreground"}
+            tone={health.pendingUnits > 0 ? "text-foreground/60" : "text-muted-foreground"}
           />
         </div>
       </CardContent>

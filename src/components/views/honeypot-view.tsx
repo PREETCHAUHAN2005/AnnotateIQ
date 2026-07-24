@@ -104,13 +104,13 @@ export function HoneypotView({ job }: { job: Job }) {
             <span className="text-sm font-medium flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" /> Overall honeypot accuracy
             </span>
-            <span className={cn("text-2xl font-bold tabular-nums", accuracy >= 0.8 ? "text-white" : accuracy >= 0.5 ? "text-white/60" : "text-rose-400")}>
+            <span className={cn("text-2xl font-bold tabular-nums", accuracy >= 0.8 ? "text-foreground" : accuracy >= 0.5 ? "text-foreground/60" : "text-rose-400")}>
               {Math.round(accuracy * 100)}%
             </span>
           </div>
           <div className="h-3 rounded-full bg-muted overflow-hidden">
             <div
-              className={cn("h-full transition-all duration-500", accuracy >= 0.8 ? "bg-white" : accuracy >= 0.5 ? "bg-white/50" : "bg-rose-500")}
+              className={cn("h-full transition-all duration-500", accuracy >= 0.8 ? "bg-foreground" : accuracy >= 0.5 ? "bg-foreground/50" : "bg-rose-500")}
               style={{ width: `${accuracy * 100}%` }}
             />
           </div>
@@ -143,14 +143,14 @@ export function HoneypotView({ job }: { job: Job }) {
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-muted-foreground">#{item.seq}</span>
-                        <span className={cn("h-2 w-2 rounded-full shrink-0", passed ? "bg-white" : "bg-rose-500")} />
+                        <span className={cn("h-2 w-2 rounded-full shrink-0", passed ? "bg-foreground" : "bg-rose-500")} />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs truncate">
                             {item.predicted?.chapter ? String(item.predicted.chapter) : "—"}
                           </div>
                         </div>
                         {passed ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-white shrink-0" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-foreground shrink-0" />
                         ) : (
                           <XCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
                         )}
@@ -158,7 +158,7 @@ export function HoneypotView({ job }: { job: Job }) {
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                         <span>conf {item.confidence?.toFixed(2) ?? "—"}</span>
                         <span>·</span>
-                        <span className={cn(item.diffs.every((d) => d.match) ? "text-white" : "text-rose-400")}>
+                        <span className={cn(item.diffs.every((d) => d.match) ? "text-foreground" : "text-rose-400")}>
                           {item.diffs.filter((d) => d.match).length}/{item.diffs.length} fields match
                         </span>
                       </div>
@@ -184,7 +184,7 @@ export function HoneypotView({ job }: { job: Job }) {
                   className={cn(
                     "gap-1",
                     selected.event?.kind === "honeypot_pass"
-                      ? "border-white/30 text-white"
+                      ? "border-foreground/30 text-foreground"
                       : "border-rose-500/40 text-rose-400"
                   )}
                 >
@@ -217,7 +217,7 @@ export function HoneypotView({ job }: { job: Job }) {
                       key={d.field}
                       className={cn(
                         "grid grid-cols-[100px_1fr_1fr_24px] gap-3 items-center p-2.5 rounded-lg border",
-                        d.match ? "border-white/20 bg-white/5" : "border-rose-500/30 bg-rose-500/5"
+                        d.match ? "border-foreground/20 bg-foreground/5" : "border-rose-500/30 bg-rose-500/5"
                       )}
                     >
                       <div className="text-xs font-medium capitalize text-muted-foreground">{d.field}</div>
@@ -231,7 +231,7 @@ export function HoneypotView({ job }: { job: Job }) {
                       </div>
                       <div>
                         {d.match ? (
-                          <CheckCircle2 className="h-4 w-4 text-white" />
+                          <CheckCircle2 className="h-4 w-4 text-foreground" />
                         ) : (
                           <XCircle className="h-4 w-4 text-rose-400" />
                         )}
@@ -251,7 +251,7 @@ export function HoneypotView({ job }: { job: Job }) {
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-muted-foreground">Route</div>
-                  <div className={cn("text-sm font-mono", selected.route === "auto" ? "text-white" : "text-white/60")}>
+                  <div className={cn("text-sm font-mono", selected.route === "auto" ? "text-foreground" : "text-foreground/60")}>
                     {selected.route ?? "—"}
                   </div>
                 </div>
@@ -296,9 +296,9 @@ function SummaryCard({
 }) {
   const toneCls = {
     primary: "text-primary bg-primary/10",
-    emerald: "text-white bg-white/10",
+    emerald: "text-foreground bg-foreground/10",
     rose: "text-rose-400 bg-rose-500/10",
-    amber: "text-white/60 bg-white/10",
+    amber: "text-foreground/60 bg-foreground/10",
   }[tone];
   return (
     <Card className="border-border/60 card-hover animate-fade-in">

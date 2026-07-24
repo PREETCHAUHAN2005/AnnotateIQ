@@ -110,10 +110,10 @@ Do NOT rewrite labels. Only judge.`,
 ];
 
 const toneClasses = {
-  emerald: { border: "border-white/30", text: "text-white", bg: "bg-white/5", glow: "glow-emerald" },
-  teal: { border: "border-white/20", text: "text-white/80", bg: "bg-white/5", glow: "" },
-  violet: { border: "border-white/20", text: "text-white/70", bg: "bg-white/5", glow: "" },
-  amber: { border: "border-white/20", text: "text-white/60", bg: "bg-white/5", glow: "glow-amber" },
+  emerald: { border: "border-foreground/30", text: "text-foreground", bg: "bg-foreground/5", glow: "glow-emerald" },
+  teal: { border: "border-foreground/20", text: "text-foreground/80", bg: "bg-foreground/5", glow: "" },
+  violet: { border: "border-foreground/20", text: "text-foreground/70", bg: "bg-foreground/5", glow: "" },
+  amber: { border: "border-foreground/20", text: "text-foreground/60", bg: "bg-foreground/5", glow: "glow-amber" },
   rose: { border: "border-rose-500/40", text: "text-rose-400", bg: "bg-rose-500/5", glow: "glow-rose" },
 };
 
@@ -333,8 +333,8 @@ function FlowNode({
 }) {
   const tc = {
     muted: "border-border/60 text-muted-foreground bg-muted/30",
-    teal: "border-white/20 text-white/80 bg-white/5",
-    emerald: "border-white/30 text-white bg-white/5",
+    teal: "border-foreground/20 text-foreground/80 bg-foreground/5",
+    emerald: "border-foreground/30 text-foreground bg-foreground/5",
   }[tone];
   return (
     <div className={cn("rounded-xl border p-3 flex flex-col items-center text-center min-w-[100px]", tc)}>

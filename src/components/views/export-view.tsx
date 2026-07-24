@@ -62,20 +62,20 @@ export function ExportView({ job }: { job: Job }) {
             <div className="text-2xl font-bold tabular-nums mt-1">{finals.length}</div>
           </CardContent>
         </Card>
-        <Card className="border-white/25">
+        <Card className="border-foreground/25">
           <CardContent className="p-4">
-            <div className="text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+            <div className="text-xs text-foreground uppercase tracking-wider flex items-center gap-1.5">
               <CheckCircle2 className="h-3 w-3" /> Eligible
             </div>
-            <div className="text-2xl font-bold tabular-nums mt-1 text-white">{eligible.length}</div>
+            <div className="text-2xl font-bold tabular-nums mt-1 text-foreground">{eligible.length}</div>
           </CardContent>
         </Card>
-        <Card className="border-white/20">
+        <Card className="border-foreground/20">
           <CardContent className="p-4">
-            <div className="text-xs text-white/60 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="text-xs text-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
               <Filter className="h-3 w-3" /> Excluded
             </div>
-            <div className="text-2xl font-bold tabular-nums mt-1 text-white/60">{excluded.length}</div>
+            <div className="text-2xl font-bold tabular-nums mt-1 text-foreground/60">{excluded.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -150,7 +150,7 @@ export function ExportView({ job }: { job: Job }) {
                 onClick={copyToClipboard}
                 className="gap-1.5 shrink-0"
               >
-                {copied ? <Check className="h-3.5 w-3.5 text-white" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? <Check className="h-3.5 w-3.5 text-foreground" /> : <Copy className="h-3.5 w-3.5" />}
                 {copied ? "Copied!" : "Copy JSONL"}
               </Button>
             )}
@@ -175,15 +175,15 @@ export function ExportView({ job }: { job: Job }) {
                       key={f.id}
                       className={cn(
                         "p-2 rounded border border-border/40 bg-muted/30",
-                        f.reviewerAction === "edit" && "border-white/20",
-                        f.reviewerAction === "accept" && "border-white/20"
+                        f.reviewerAction === "edit" && "border-foreground/20",
+                        f.reviewerAction === "accept" && "border-foreground/20"
                       )}
                     >
                       <span className="text-muted-foreground">{"{"}</span>
                       <br />
                       {Object.entries({ ...f.payload, reviewed_by: f.reviewedBy, reviewer_action: f.reviewerAction ?? "auto" }).map(([k, v], i, arr) => (
                         <span key={k}>
-                          {"  "}<span className="text-primary">"{k}"</span>: <span className={cn(typeof v === "string" ? "text-white/60" : typeof v === "number" ? "text-white/80" : "text-white/70")}>{JSON.stringify(v)}</span>{i < arr.length - 1 ? "," : ""}
+                          {"  "}<span className="text-primary">"{k}"</span>: <span className={cn(typeof v === "string" ? "text-foreground/60" : typeof v === "number" ? "text-foreground/80" : "text-foreground/70")}>{JSON.stringify(v)}</span>{i < arr.length - 1 ? "," : ""}
                           <br />
                         </span>
                       ))}
@@ -202,7 +202,7 @@ export function ExportView({ job }: { job: Job }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Filter className="h-4 w-4 text-white/60" /> Excluded rows
+              <Filter className="h-4 w-4 text-foreground/60" /> Excluded rows
             </CardTitle>
             <CardDescription>Rejected or unreviewed human-routed units — not in the export.</CardDescription>
           </CardHeader>

@@ -34,9 +34,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const DIFF_COLORS = ["#ffffff", "#888888", "#f87171"];
-const BLOOM_COLORS = ["#ffffff", "#bbbbbb", "#888888", "#555555"];
-const LANG_COLORS = ["#ffffff", "#888888", "#555555"];
+const DIFF_COLORS = ["var(--foreground)", "var(--muted-foreground)", "#f87171"];
+const BLOOM_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
+const LANG_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
 
 export function InsightsView() {
   const [stats, setStats] = useState<InsightsStats | null>(null);
@@ -156,10 +156,10 @@ export function InsightsView() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-                  <YAxis domain={[0, 100]} tick={{ fill: "#888888", fontSize: 11 }} unit="%" />
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
-                  <Line type="monotone" dataKey="autoRate" stroke="#ffffff" strokeWidth={2} dot={{ fill: "#ffffff", r: 4 }} />
+                  <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                  <YAxis domain={[0, 100]} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} unit="%" />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
+                  <Line type="monotone" dataKey="autoRate" stroke="var(--foreground)" strokeWidth={2} dot={{ fill: "var(--foreground)", r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -178,12 +178,12 @@ export function InsightsView() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-                  <YAxis domain={[0, 1]} tick={{ fill: "#888888", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                  <YAxis domain={[0, 1]} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="avgConf" stroke="#ffffff" strokeWidth={2} name="Avg confidence" dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="kappa" stroke="#666666" strokeWidth={2} name="Fleiss κ" dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="avgConf" stroke="var(--foreground)" strokeWidth={2} name="Avg confidence" dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="kappa" stroke="var(--muted-foreground)" strokeWidth={2} name="Fleiss κ" dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -205,21 +205,21 @@ export function InsightsView() {
               <AreaChart data={cumulativeData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
                 <defs>
                   <linearGradient id="autoGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--foreground)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--foreground)" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="humanGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#666666" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#666666" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--muted-foreground)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--muted-foreground)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-                <YAxis tick={{ fill: "#888888", fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="auto" stackId="a" stroke="#ffffff" fill="url(#autoGrad)" name="Cumulative auto" />
-                <Area type="monotone" dataKey="human" stackId="a" stroke="#666666" fill="url(#humanGrad)" name="Cumulative human" />
+                <Area type="monotone" dataKey="auto" stackId="a" stroke="var(--foreground)" fill="url(#autoGrad)" name="Cumulative auto" />
+                <Area type="monotone" dataKey="human" stackId="a" stroke="var(--muted-foreground)" fill="url(#humanGrad)" name="Cumulative human" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -240,7 +240,7 @@ export function InsightsView() {
                   <Pie data={diffData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
                     {diffData.map((_, i) => <Cell key={i} fill={DIFF_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -257,9 +257,9 @@ export function InsightsView() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={bloomData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-                  <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} />
-                  <YAxis allowDecimals={false} tick={{ fill: "#888888", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} cursor={{ fill: "oklch(1 0 0 / 5%)" }} />
+                  <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                     {bloomData.map((_, i) => <Cell key={i} fill={BLOOM_COLORS[i % BLOOM_COLORS.length]} />)}
                   </Bar>
@@ -281,7 +281,7 @@ export function InsightsView() {
                   <Pie data={langData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
                     {langData.map((_, i) => <Cell key={i} fill={LANG_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -329,10 +329,10 @@ function KpiCard({
   tone: "emerald" | "teal" | "amber" | "violet";
 }) {
   const toneCls = {
-    emerald: "text-white bg-white/10",
-    teal: "text-white/80 bg-white/10",
-    amber: "text-white/60 bg-white/10",
-    violet: "text-white/70 bg-white/10",
+    emerald: "text-foreground bg-foreground/10",
+    teal: "text-foreground/80 bg-foreground/10",
+    amber: "text-foreground/60 bg-foreground/10",
+    violet: "text-foreground/70 bg-foreground/10",
   }[tone];
   return (
     <Card className="border-border/60 card-hover animate-fade-in">

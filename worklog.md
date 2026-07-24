@@ -546,3 +546,47 @@ Stage Summary:
 - All chart colors updated to white/gray tones
 - Features and functionality unchanged — only the visual theme was modified
 - 0 lint errors
+
+---
+Task ID: 22
+Agent: main
+Task: Fix text visibility in dark and light mode, fix UI inconsistencies
+
+Work Log:
+- QA tested both dark and light modes via agent-browser + VLM to identify visibility issues.
+- DARK MODE issues found and fixed:
+  1. "production grade" gradient text was too dark (white-to-gray gradient invisible on black) → added .dark-specific gradient with white-to-lighter-gray
+  2. muted-foreground too dim (0.6 lightness) → increased to 0.68 for better contrast
+  3. Stat card labels and sub-labels too dim → changed from text-white to text-foreground (adapts to theme)
+  4. Sidebar inactive items too dark → fixed via muted-foreground increase
+  5. StatusDot used bg-white (invisible in light) → changed to bg-foreground (theme-aware)
+  6. Border color too subtle (0.2) → increased to 0.22 for better definition
+- LIGHT MODE issues found and fixed:
+  1. "production grade" gradient text was white-on-white (invisible) → added :root-specific gradient with dark-to-medium-gray
+  2. Pipeline health widget sub-text too faint → fixed via muted-foreground adjustment (0.45 → 0.4 for darker text)
+  3. All text-white/bg-white/border-white classes → replaced with text-foreground/bg-foreground/border-foreground (theme-aware)
+  4. Chart hex colors (#ffffff, #888888) → replaced with CSS variables (var(--foreground), var(--muted-foreground))
+  5. Tooltip backgrounds hardcoded to #0a0a0a → changed to var(--card) with var(--border)
+  6. Glow effects used white → added .dark-specific overrides for light mode
+  7. Glass utility used dark background → added light mode variant
+  8. card-hover border color → theme-aware (lighter in light mode, brighter in dark)
+  9. bg-grid pattern → theme-aware (black lines in light mode, white lines in dark)
+  10. pulse-ring animation → uses neutral gray instead of white
+- GLOBAL fixes:
+  - All hardcoded color classes (text-emerald-400, text-teal-400, etc.) → theme-aware foreground/opacity
+  - All chart color arrays (PIE_COLORS, LANG_COLORS, etc.) → CSS variable based
+  - All conditional chart fills → CSS variable based
+  - All gradient stop colors → CSS variable based
+- ESLint: 0 errors, 4 warnings
+- Verified via agent-browser + VLM:
+  - DARK MODE: "production grade" readable ✓, sidebar items visible ✓, all text visible ✓
+  - LIGHT MODE: "production grade" readable ✓, stat cards visible ✓, pipeline health visible ✓, all text visible ✓
+
+Stage Summary:
+- Fixed all text visibility issues in both dark and light modes
+- Made all colors theme-aware using CSS variables (var(--foreground), var(--muted-foreground), etc.)
+- Fixed gradient text, glow effects, glass utility, card-hover, bg-grid, pulse-ring for both themes
+- Fixed all chart colors to use CSS variables instead of hardcoded hex values
+- Fixed tooltip backgrounds to use theme-aware CSS variables
+- 0 lint errors
+- Both modes verified working with excellent text visibility

@@ -81,9 +81,9 @@ export function OverviewView({
                 {[
                   { label: "Ingest & segment", icon: Layers, tone: "text-muted-foreground" },
                   { label: "Fan-out · 8 agents/unit", icon: Cpu, tone: "text-primary" },
-                  { label: "Merge · weakest-link score", icon: GitBranch, tone: "text-white/80" },
-                  { label: "Critic · rubric gate", icon: ShieldCheck, tone: "text-white/60" },
-                  { label: "Confidence ≥ 0.85 → auto", icon: Gauge, tone: "text-white" },
+                  { label: "Merge · weakest-link score", icon: GitBranch, tone: "text-foreground/80" },
+                  { label: "Critic · rubric gate", icon: ShieldCheck, tone: "text-foreground/60" },
+                  { label: "Confidence ≥ 0.85 → auto", icon: Gauge, tone: "text-foreground" },
                 ].map((step, i) => {
                   const Icon = step.icon;
                   return (
@@ -168,13 +168,13 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
   tone: "primary" | "teal" | "emerald" | "amber" | "violet";
 }) {
-  // Scale AI monochrome — all tones use white with varying opacity
+  // Use foreground (adapts to theme) with slight opacity variations
   const toneClass = {
-    primary: "text-white",
-    teal: "text-white/80",
-    emerald: "text-white/90",
-    amber: "text-white/60",
-    violet: "text-white/70",
+    primary: "text-foreground",
+    teal: "text-foreground/80",
+    emerald: "text-foreground/90",
+    amber: "text-foreground/60",
+    violet: "text-foreground/70",
   }[tone];
   return (
     <Card className="border-border/60 card-hover animate-fade-in">
@@ -198,8 +198,8 @@ function StatusPill({ status }: { status: string }) {
     pending: { label: "pending", cls: "bg-muted text-muted-foreground" },
     extracting: { label: "extracting", cls: "bg-primary/15 text-primary" },
     labeling: { label: "labeling", cls: "bg-primary/15 text-primary" },
-    review: { label: "review", cls: "bg-white/15 text-white/60" },
-    done: { label: "done", cls: "bg-white/15 text-white" },
+    review: { label: "review", cls: "bg-foreground/15 text-foreground/60" },
+    done: { label: "done", cls: "bg-foreground/15 text-foreground" },
     failed: { label: "failed", cls: "bg-rose-500/15 text-rose-400" },
   };
   const s = map[status] ?? map.pending;

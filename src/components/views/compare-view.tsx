@@ -20,7 +20,7 @@ import {
 import { GitCompare, Loader2, Trophy, TrendingUp, ShieldCheck, Target, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const BAR_COLORS = ["#ffffff", "#aaaaaa", "#666666", "#444444"];
+const BAR_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
 
 export function CompareView() {
   const [jobs, setJobs] = useState<JobComparison[]>([]);
@@ -121,22 +121,22 @@ export function CompareView() {
                       <div className="text-[10px] text-muted-foreground mt-0.5">{j.status}</div>
                     </td>
                     <td className="p-3 text-right font-mono tabular-nums">{j.unitCount}</td>
-                    <td className="p-3 text-right font-mono text-white tabular-nums">{j.auto}</td>
-                    <td className="p-3 text-right font-mono text-white/60 tabular-nums">{j.human}</td>
+                    <td className="p-3 text-right font-mono text-foreground tabular-nums">{j.auto}</td>
+                    <td className="p-3 text-right font-mono text-foreground/60 tabular-nums">{j.human}</td>
                     <td className="p-3 text-right">
-                      <span className={cn("font-mono tabular-nums", j.autoRate >= 0.5 ? "text-white" : "text-white/60")}>
+                      <span className={cn("font-mono tabular-nums", j.autoRate >= 0.5 ? "text-foreground" : "text-foreground/60")}>
                         {Math.round(j.autoRate * 100)}%
                       </span>
                     </td>
                     <td className="p-3 text-right font-mono tabular-nums">{j.avgConfidence.toFixed(2)}</td>
                     <td className="p-3 text-right">
-                      <span className={cn("font-mono tabular-nums", j.kappaChapter.tone === "good" && "text-white", j.kappaChapter.tone === "warn" && "text-white/60", j.kappaChapter.tone === "bad" && "text-rose-400")}>
+                      <span className={cn("font-mono tabular-nums", j.kappaChapter.tone === "good" && "text-foreground", j.kappaChapter.tone === "warn" && "text-foreground/60", j.kappaChapter.tone === "bad" && "text-rose-400")}>
                         {j.kappaChapter.value.toFixed(3)}
                       </span>
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5 text-xs">
-                        <span className="text-white font-mono">{j.honeypotPass}</span>
+                        <span className="text-foreground font-mono">{j.honeypotPass}</span>
                         <span className="text-muted-foreground">/</span>
                         <span className="text-rose-400 font-mono">{j.honeypotFail}</span>
                       </div>
@@ -154,24 +154,24 @@ export function CompareView() {
         <ChartCard title="Auto vs Human rate" desc="Routing split per job" icon={GitBranch}>
           <BarChart data={autoRateData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-            <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-            <YAxis tick={{ fill: "#888888", fontSize: 11 }} unit="%" />
-            <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} cursor={{ fill: "oklch(1 0 0 / 5%)" }} />
+            <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+            <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} unit="%" />
+            <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="Auto %" stackId="a" fill="#ffffff" radius={[0, 0, 0, 4]} />
-            <Bar dataKey="Human %" stackId="a" fill="#666666" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Auto %" stackId="a" fill="var(--foreground)" radius={[0, 0, 0, 4]} />
+            <Bar dataKey="Human %" stackId="a" fill="var(--muted-foreground)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ChartCard>
 
         <ChartCard title="Average confidence" desc="Mean confidence per job" icon={Target}>
           <BarChart data={confData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-            <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-            <YAxis domain={[0, 1]} tick={{ fill: "#888888", fontSize: 11 }} />
-            <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} cursor={{ fill: "oklch(1 0 0 / 5%)" }} />
+            <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+            <YAxis domain={[0, 1]} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
             <Bar dataKey="Avg Confidence" radius={[4, 4, 0, 0]}>
               {confData.map((d, i) => (
-                <Cell key={i} fill={d["Avg Confidence"] >= 0.85 ? "#ffffff" : d["Avg Confidence"] >= 0.6 ? "#888888" : "#f87171"} />
+                <Cell key={i} fill={d["Avg Confidence"] >= 0.85 ? "var(--foreground)" : d["Avg Confidence"] >= 0.6 ? "var(--muted-foreground)" : "#f87171"} />
               ))}
             </Bar>
           </BarChart>
@@ -180,12 +180,12 @@ export function CompareView() {
         <ChartCard title="Inter-annotator agreement" desc="Fleiss' κ per job" icon={TrendingUp}>
           <BarChart data={kappaData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-            <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-            <YAxis domain={[0, 1]} tick={{ fill: "#888888", fontSize: 11 }} />
-            <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} cursor={{ fill: "oklch(1 0 0 / 5%)" }} />
+            <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+            <YAxis domain={[0, 1]} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
             <Bar dataKey="Fleiss κ" radius={[4, 4, 0, 0]}>
               {kappaData.map((d, i) => (
-                <Cell key={i} fill={d["Fleiss κ"] > 0.8 ? "#ffffff" : d["Fleiss κ"] >= 0.6 ? "#888888" : "#f87171"} />
+                <Cell key={i} fill={d["Fleiss κ"] > 0.8 ? "var(--foreground)" : d["Fleiss κ"] >= 0.6 ? "var(--muted-foreground)" : "#f87171"} />
               ))}
             </Bar>
           </BarChart>
@@ -194,11 +194,11 @@ export function CompareView() {
         <ChartCard title="Honeypot results" desc="Pass vs fail per job" icon={ShieldCheck}>
           <BarChart data={honeypotData} margin={{ top: 8, right: 8, bottom: 24, left: -10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
-            <XAxis dataKey="name" tick={{ fill: "#888888", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-            <YAxis allowDecimals={false} tick={{ fill: "#888888", fontSize: 11 }} />
-            <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: 8 }} cursor={{ fill: "oklch(1 0 0 / 5%)" }} />
+            <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+            <YAxis allowDecimals={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="Pass" stackId="a" fill="#ffffff" radius={[0, 0, 0, 4]} />
+            <Bar dataKey="Pass" stackId="a" fill="var(--foreground)" radius={[0, 0, 0, 4]} />
             <Bar dataKey="Fail" stackId="a" fill="#f87171" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ChartCard>

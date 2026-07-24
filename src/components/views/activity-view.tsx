@@ -25,12 +25,12 @@ import { cn } from "@/lib/utils";
 
 const KIND_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; tone: string; color: string }> = {
   job_created: { label: "Job created", icon: FileText, tone: "text-primary", color: "bg-primary/10 border-primary/30" },
-  honeypot_pass: { label: "Honeypot passed", icon: CheckCircle2, tone: "text-white", color: "bg-white/5 border-white/25" },
+  honeypot_pass: { label: "Honeypot passed", icon: CheckCircle2, tone: "text-foreground", color: "bg-foreground/5 border-foreground/25" },
   honeypot_fail: { label: "Honeypot failed", icon: XCircle, tone: "text-rose-400", color: "bg-rose-500/5 border-rose-500/30" },
-  critic_fail: { label: "Critic failed", icon: ShieldAlert, tone: "text-white/60", color: "bg-white/5 border-white/20" },
+  critic_fail: { label: "Critic failed", icon: ShieldAlert, tone: "text-foreground/60", color: "bg-foreground/5 border-foreground/20" },
   schema_fail: { label: "Schema failed", icon: AlertTriangle, tone: "text-rose-400", color: "bg-rose-500/5 border-rose-500/30" },
-  disagreement: { label: "Agent disagreement", icon: GitBranch, tone: "text-white/60", color: "bg-white/5 border-white/20" },
-  retry: { label: "Retry triggered", icon: RotateCcw, tone: "text-white/70", color: "bg-white/5 border-white/20" },
+  disagreement: { label: "Agent disagreement", icon: GitBranch, tone: "text-foreground/60", color: "bg-foreground/5 border-foreground/20" },
+  retry: { label: "Retry triggered", icon: RotateCcw, tone: "text-foreground/70", color: "bg-foreground/5 border-foreground/20" },
 };
 
 export function ActivityView() {
