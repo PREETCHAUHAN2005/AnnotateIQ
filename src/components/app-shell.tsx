@@ -12,7 +12,6 @@ import {
   Download,
   RefreshCw,
   GitBranch,
-  Sparkles,
   TableProperties,
   GitCompare,
   FlaskConical,
@@ -46,18 +45,14 @@ const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?
 export function AppShell({
   view,
   onViewChange,
-  jobs,
   activeJob,
-  onSelectJob,
   onRefreshJobs,
   loadingJobs,
   children,
 }: {
   view: ViewKey;
   onViewChange: (v: ViewKey) => void;
-  jobs: Job[];
   activeJob: Job | null;
-  onSelectJob: (id: string) => void;
   onRefreshJobs: () => void;
   loadingJobs: boolean;
   children: React.ReactNode;
@@ -173,57 +168,6 @@ export function AppShell({
                 );
               })}
             </nav>
-
-            {/* Recent jobs — separate scroll region */}
-            <div className="shrink-0 border-t border-border/60 p-3 bg-sidebar/80">
-              <div className="flex items-center gap-2 px-2 mb-2">
-                <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Recent Jobs
-                </span>
-              </div>
-              <div
-                className="max-h-36 overflow-y-auto overscroll-contain space-y-1 pr-1"
-                onWheel={(e) => e.stopPropagation()}
-              >
-                {jobs.length === 0 && (
-                  <p className="text-xs text-muted-foreground px-2 py-3">No jobs yet.</p>
-                )}
-                {jobs.map((j) => {
-                  const isActive = activeJob?.id === j.id;
-                  return (
-                    <button
-                      key={j.id}
-                      type="button"
-                      onClick={() => {
-                        onSelectJob(j.id);
-                        setMobileOpen(false);
-                      }}
-                      className={cn(
-                        "w-full text-left px-2.5 py-2 rounded-md text-xs transition",
-                        isActive ? "bg-accent text-foreground" : "hover:bg-accent/60 text-muted-foreground"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <StatusDot status={j.status} />
-                        <span className="truncate font-medium">{j.filename}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                        <span>{j.unitCount} units</span>
-                        {j.status === "review" || j.status === "done" ? (
-                          <>
-                            <span>·</span>
-                            <span className="text-primary">{j.autoCount} auto</span>
-                            <span>·</span>
-                            <span className="text-foreground/60">{j.humanCount} human</span>
-                          </>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </aside>
 
@@ -241,18 +185,4 @@ export function AppShell({
       </div>
     </div>
   );
-}
-
-function StatusDot({ status }: { status: string }) {
-  const color =
-    status === "done"
-      ? "bg-foreground"
-      : status === "review"
-      ? "bg-foreground/50"
-      : status === "labeling" || status === "extracting"
-      ? "bg-foreground animate-pulse"
-      : status === "failed"
-      ? "bg-rose-500"
-      : "bg-foreground/25";
-  return <span className={cn("h-2 w-2 rounded-full shrink-0", color)} />;
 }

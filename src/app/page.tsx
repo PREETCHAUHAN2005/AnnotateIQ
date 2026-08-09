@@ -272,9 +272,7 @@ export default function Home() {
       <AppShell
         view={view}
         onViewChange={setView}
-        jobs={jobs}
         activeJob={activeJob}
-        onSelectJob={handleSelectJob}
         onRefreshJobs={refreshJobs}
         loadingJobs={loadingJobs}
       >
