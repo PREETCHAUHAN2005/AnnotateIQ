@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Job, PipelineEvent } from "@/lib/types";
+import type { Job, JobStatus, PipelineEvent } from "@/lib/types";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,10 +51,16 @@ export function PipelineView({
   job,
   onGoToReview,
   onGoToQuality,
+  autoStart = false,
+  onAutoStartConsumed,
+  onJobStatus,
 }: {
   job: Job;
   onGoToReview: () => void;
   onGoToQuality: () => void;
+  autoStart?: boolean;
+  onAutoStartConsumed?: () => void;
+  onJobStatus?: (patch: Partial<Job> & { id: string }) => void;
 }) {
   const [units, setUnits] = useState<UnitState[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -77,6 +83,13 @@ export function PipelineView({
     if (!job.id) return;
     setRunning(job.status === "labeling" || job.status === "extracting");
     setTotal(job.unitCount);
+    setAutoCount(job.autoCount ?? 0);
+    setHumanCount(job.humanCount ?? 0);
+    setDone(
+      job.status === "review" || job.status === "done" || job.status === "failed"
+        ? job.unitCount
+        : 0
+    );
 
     const es = new EventSource(`/api/jobs/${job.id}/stream`);
     es.onmessage = (e) => {
@@ -124,6 +137,13 @@ export function PipelineView({
             pushLog(`Job moved to ${d.status} · ${d.auto ?? 0} auto · ${d.human ?? 0} human`, "ok");
           }
           if (d.status === "failed") pushLog(`Job failed: ${d.error ?? "unknown"}`, "err");
+          onJobStatus?.({
+            id: job.id,
+            status: String(d.status) as JobStatus,
+            ...(typeof d.auto === "number" ? { autoCount: d.auto } : {}),
+            ...(typeof d.human === "number" ? { humanCount: d.human } : {}),
+            ...(typeof d.total === "number" ? { unitCount: d.total } : {}),
+          });
         }
         break;
       case "job:progress":
@@ -205,12 +225,21 @@ export function PipelineView({
     setShowConfirm(false);
     try {
       await api.runPipeline(job.id);
-      toast.success("Pipeline started");
+      toast.success("Pipeline finished");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to start");
       setRunning(false);
     }
   };
+
+  // Auto-start when navigating from Jobs "Run pipeline"
+  useEffect(() => {
+    if (!autoStart) return;
+    onAutoStartConsumed?.();
+    if (running) return;
+    void runPipeline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, job.id]);
 
   const handleRunClick = () => {
     setShowConfirm(true);

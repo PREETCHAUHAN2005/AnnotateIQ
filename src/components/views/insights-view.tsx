@@ -41,15 +41,21 @@ const LANG_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--mute
 export function InsightsView() {
   const [stats, setStats] = useState<InsightsStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     api
       .getInsights()
       .then((r) => {
-        if (!cancelled) setStats(r);
+        if (!cancelled) {
+          setStats(r);
+          setError(null);
+        }
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load insights");
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -63,6 +69,17 @@ export function InsightsView() {
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center space-y-2">
+          <p className="text-rose-400 text-sm">{error}</p>
+          <p className="text-muted-foreground text-xs">Could not load insights. Try refreshing.</p>
+        </CardContent>
+      </Card>
     );
   }
 

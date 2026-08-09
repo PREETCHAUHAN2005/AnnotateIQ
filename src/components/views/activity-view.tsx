@@ -99,7 +99,6 @@ export function ActivityView() {
         </Button>
         {Object.entries(KIND_META).map(([key, meta]) => {
           const count = events.filter((e) => e.kind === key).length;
-          if (count === 0 && kindFilter !== key) return null;
           return (
             <Button
               key={key}
@@ -110,7 +109,9 @@ export function ActivityView() {
             >
               <meta.icon className={cn("h-3 w-3", meta.tone)} />
               {meta.label}
-              {count > 0 && <span className="font-mono text-[10px] opacity-70">{count}</span>}
+              {kindFilter === "all" || kindFilter === key ? (
+                count > 0 && <span className="font-mono text-[10px] opacity-70">{count}</span>
+              ) : null}
             </Button>
           );
         })}

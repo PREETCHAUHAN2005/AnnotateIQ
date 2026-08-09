@@ -27,21 +27,21 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard },
-  { key: "jobs", label: "Jobs & Upload", icon: ListChecks },
-  { key: "pipeline", label: "Live Pipeline", icon: Play },
-  { key: "units", label: "Annotated Units", icon: TableProperties },
-  { key: "review", label: "Review Queue", icon: GitBranch },
-  { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical },
-  { key: "quality", label: "Quality", icon: Gauge },
-  { key: "compare", label: "Compare Jobs", icon: GitCompare },
-  { key: "insights", label: "Insights", icon: TrendingUp },
-  { key: "taxonomy", label: "Taxonomy", icon: BookOpen },
-  { key: "search", label: "Global Search", icon: Search },
-  { key: "activity", label: "Activity", icon: Activity },
-  { key: "architecture", label: "Architecture", icon: Network },
-  { key: "export", label: "Export", icon: Download },
+const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?: string }>; shortcut: string }[] = [
+  { key: "overview", label: "Overview", icon: LayoutDashboard, shortcut: "o" },
+  { key: "jobs", label: "Jobs & Upload", icon: ListChecks, shortcut: "j" },
+  { key: "pipeline", label: "Live Pipeline", icon: Play, shortcut: "p" },
+  { key: "units", label: "Annotated Units", icon: TableProperties, shortcut: "u" },
+  { key: "review", label: "Review Queue", icon: GitBranch, shortcut: "r" },
+  { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical, shortcut: "h" },
+  { key: "quality", label: "Quality", icon: Gauge, shortcut: "q" },
+  { key: "compare", label: "Compare Jobs", icon: GitCompare, shortcut: "c" },
+  { key: "insights", label: "Insights", icon: TrendingUp, shortcut: "i" },
+  { key: "taxonomy", label: "Taxonomy", icon: BookOpen, shortcut: "t" },
+  { key: "search", label: "Global Search", icon: Search, shortcut: "s" },
+  { key: "activity", label: "Activity", icon: Activity, shortcut: "y" },
+  { key: "architecture", label: "Architecture", icon: Network, shortcut: "a" },
+  { key: "export", label: "Export", icon: Download, shortcut: "e" },
 ];
 
 export function AppShell({
@@ -150,7 +150,7 @@ export function AppShell({
                       "ml-auto text-[9px] font-mono px-1 py-0.5 rounded transition-opacity",
                       active ? "bg-primary/20 text-primary opacity-100" : "bg-muted text-muted-foreground opacity-0 group-hover:opacity-100"
                     )}>
-                      g {item.key[0]}
+                      g {item.shortcut}
                     </kbd>
                   </button>
                 );

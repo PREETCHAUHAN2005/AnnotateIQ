@@ -17,11 +17,14 @@ export function ExportView({ job }: { job: Job }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     api
       .getFinals(job.id)
-      .then((r) => setFinals(r.finals))
-      .catch((e) => toast.error(e instanceof Error ? e.message : "load failed"))
-      .finally(() => setLoading(false));
+      .then((r) => { if (!cancelled) setFinals(r.finals); })
+      .catch((e) => { if (!cancelled) toast.error(e instanceof Error ? e.message : "load failed"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [job.id]);
 
   const eligible = finals.filter(

@@ -191,6 +191,10 @@ export function KeyboardShortcutsHelp({
               { keys: ["g", "h"], action: "Go to Honeypots" },
               { keys: ["g", "q"], action: "Go to Quality" },
               { keys: ["g", "c"], action: "Go to Compare" },
+              { keys: ["g", "i"], action: "Go to Insights" },
+              { keys: ["g", "t"], action: "Go to Taxonomy" },
+              { keys: ["g", "s"], action: "Go to Search" },
+              { keys: ["g", "y"], action: "Go to Activity" },
               { keys: ["g", "a"], action: "Go to Architecture" },
               { keys: ["g", "e"], action: "Go to Export" },
             ].map((s, i) => (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -33,8 +33,8 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ErrorBoundary>{children}</ErrorBoundary>
+          <Toaster />
         </ThemeProvider>
-        <Toaster />
       </body>
     </html>
   );

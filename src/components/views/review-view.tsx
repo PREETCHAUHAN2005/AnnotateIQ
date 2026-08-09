@@ -53,13 +53,13 @@ export function ReviewView({ job }: { job: Job }) {
     try {
       const { queue } = await api.getReviewQueue(job.id, false);
       setItems(queue);
-      if (idx >= queue.length) setIdx(0);
+      setIdx((prev) => (prev >= queue.length ? 0 : prev));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to load queue");
     } finally {
       setLoading(false);
     }
-  }, [job.id, idx]);
+  }, [job.id]);
 
   useEffect(() => {
     load();
@@ -340,7 +340,7 @@ export function ReviewView({ job }: { job: Job }) {
                     )}
                     <Separator />
                     <div className="flex flex-wrap gap-2">
-                      <Button onClick={() => submit("accept")} disabled={submitting} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-foreground">
+                      <Button onClick={() => submit("accept")} disabled={submitting} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
                         <Check className="h-4 w-4" /> Accept <kbd className="ml-1 text-[10px] opacity-70">A</kbd>
                       </Button>
                       {!editMode ? (

@@ -18,6 +18,7 @@ import {
   Target,
   AlertTriangle,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -130,7 +131,12 @@ export function HoneypotView({ job }: { job: Job }) {
             <ScrollArea className="h-[500px]">
               <div className="space-y-1 p-3 pt-0">
                 {items.map((item) => {
-                  const passed = item.event?.kind === "honeypot_pass";
+                  const outcome =
+                    item.event?.kind === "honeypot_pass"
+                      ? "pass"
+                      : item.event?.kind === "honeypot_fail"
+                        ? "fail"
+                        : "pending";
                   const isActive = selected?.unitId === item.unitId;
                   return (
                     <button
@@ -143,16 +149,25 @@ export function HoneypotView({ job }: { job: Job }) {
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-muted-foreground">#{item.seq}</span>
-                        <span className={cn("h-2 w-2 rounded-full shrink-0", passed ? "bg-foreground" : "bg-rose-500")} />
+                        <span
+                          className={cn(
+                            "h-2 w-2 rounded-full shrink-0",
+                            outcome === "pass" && "bg-foreground",
+                            outcome === "fail" && "bg-rose-500",
+                            outcome === "pending" && "bg-muted-foreground/50"
+                          )}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs truncate">
                             {item.predicted?.chapter ? String(item.predicted.chapter) : "—"}
                           </div>
                         </div>
-                        {passed ? (
+                        {outcome === "pass" ? (
                           <CheckCircle2 className="h-3.5 w-3.5 text-foreground shrink-0" />
-                        ) : (
+                        ) : outcome === "fail" ? (
                           <XCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                        ) : (
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
@@ -183,15 +198,17 @@ export function HoneypotView({ job }: { job: Job }) {
                   variant="outline"
                   className={cn(
                     "gap-1",
-                    selected.event?.kind === "honeypot_pass"
-                      ? "border-foreground/30 text-foreground"
-                      : "border-rose-500/40 text-rose-400"
+                    selected.event?.kind === "honeypot_pass" && "border-foreground/30 text-foreground",
+                    selected.event?.kind === "honeypot_fail" && "border-rose-500/40 text-rose-400",
+                    !selected.event && "border-border text-muted-foreground"
                   )}
                 >
                   {selected.event?.kind === "honeypot_pass" ? (
                     <><CheckCircle2 className="h-3 w-3" /> PASSED</>
-                  ) : (
+                  ) : selected.event?.kind === "honeypot_fail" ? (
                     <><XCircle className="h-3 w-3" /> FAILED</>
+                  ) : (
+                    <><Clock className="h-3 w-3" /> PENDING</>
                   )}
                 </Badge>
               </div>

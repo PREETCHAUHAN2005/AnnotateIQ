@@ -25,13 +25,21 @@ const BAR_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted
 export function CompareView() {
   const [jobs, setJobs] = useState<JobComparison[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     api
       .compareJobs()
-      .then((r) => { if (!cancelled) setJobs(r.jobs); })
-      .catch(() => {})
+      .then((r) => {
+        if (!cancelled) {
+          setJobs(r.jobs);
+          setError(null);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load comparison");
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -41,6 +49,17 @@ export function CompareView() {
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center space-y-2">
+          <p className="text-rose-400 text-sm">{error}</p>
+          <p className="text-muted-foreground text-xs">Could not load job comparison. Try refreshing.</p>
+        </CardContent>
+      </Card>
     );
   }
 

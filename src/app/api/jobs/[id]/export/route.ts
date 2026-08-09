@@ -24,6 +24,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const p = JSON.parse(f.payload);
     return {
       ...p,
+      unit_id: p.unit_id ?? f.unitId,
+      seq: f.unit.seq,
       concepts: Array.isArray(p.concepts) ? p.concepts.join("; ") : "",
       latex: Array.isArray(p.latex) ? p.latex.join("; ") : "",
       options: Array.isArray(p.options) ? p.options.join(" | ") : "",

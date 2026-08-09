@@ -13,8 +13,11 @@ export async function GET() {
     const pendingUnits = units.filter((u) => u.status === "pending").length;
     const labeledUnits = units.filter((u) => u.status === "labeled" || u.status === "reviewed").length;
     const activeJobs = jobs.filter((j) => j.status === "labeling" || j.status === "extracting").length;
+    const failedJobs = jobs.filter((j) => j.status === "failed").length;
 
-    const status = activeJobs > 0 ? "degraded" : "healthy";
+    // Running a pipeline is healthy activity; only fail/down/pending backlog → degraded
+    let status: "healthy" | "degraded" | "down" = "healthy";
+    if (failedJobs > 0 || pendingUnits > totalUnits * 0.5) status = "degraded";
 
     return NextResponse.json({
       status,
@@ -24,10 +27,11 @@ export async function GET() {
       pendingUnits,
       labeledUnits,
       reviewedUnits: units.filter((u) => u.status === "reviewed").length,
-      agentsAvailable: 5, // taxonomy, difficulty, math, language, critic
+      agentsAvailable: 5,
       dbConnected: true,
     });
   } catch {
+    // Always 200 so clients can render a "down" state instead of spinning forever
     return NextResponse.json({
       status: "down",
       jobs: 0,
@@ -38,6 +42,6 @@ export async function GET() {
       reviewedUnits: 0,
       agentsAvailable: 0,
       dbConnected: false,
-    }, { status: 500 });
+    });
   }
 }

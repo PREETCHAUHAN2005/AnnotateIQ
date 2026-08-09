@@ -57,9 +57,9 @@ export function fleissKappa(vals: string[][]): number {
     const counts: Record<string, number> = {};
     for (const v of row) counts[v] = (counts[v] ?? 0) + 1;
     let sumSq = 0;
-    for (const c of Object.values(counts)) {
+    for (const [cat, c] of Object.entries(counts)) {
       sumSq += c * c;
-      categoryTotals[c] = (categoryTotals[c] ?? 0) + c;
+      categoryTotals[cat] = (categoryTotals[cat] ?? 0) + c;
     }
     // P_i = (sumSq - k) / (k*(k-1))
     const Pi = (sumSq - k) / (k * (k - 1));

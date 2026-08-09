@@ -50,6 +50,7 @@ export function UnitsView({ job }: { job: Job }) {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     api
       .getFinals(job.id)
       .then((r) => { if (!cancelled) setFinals(r.finals); })

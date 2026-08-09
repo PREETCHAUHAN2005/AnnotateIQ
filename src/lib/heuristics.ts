@@ -131,6 +131,17 @@ function detectMath(stem: string): { latex: string[]; has_equation: boolean } {
   return { latex, has_equation: hasEq };
 }
 
+/** Deterministic 0..1 noise from stem + salt (stable across re-runs). */
+function seededUnit(stem: string, salt: string): number {
+  let h = 2166136261;
+  const s = `${stem}::${salt}`;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 10000) / 10000;
+}
+
 function detectLanguage(stem: string): { language: "en" | "hi" | "hinglish"; code_mix_ratio: number } {
   // Hindi/Hinglish markers in latin script
   const hindiWords = /\b(hai|ka|ki|ke|ko|se|me|par|aur|ya|nahi|ho|gaya|kya|jab|tab|agar|toh|kar|raha|rahe|hua|hui|wal|nya|liya|diya|gaya|hogi|hoga|kuch|bahut|thodi|matlab|kaise|kyu|kyon)\b/gi;
@@ -138,8 +149,9 @@ function detectLanguage(stem: string): { language: "en" | "hi" | "hinglish"; cod
   const hindiCount = matches ? matches.length : 0;
   const wordCount = stem.split(/\s+/).filter(Boolean).length || 1;
   const ratio = Math.min(1, hindiCount / wordCount);
-  if (ratio > 0.25) return { language: "hinglish", code_mix_ratio: Math.round(ratio * 100) / 100 };
+  // Check pure-Hindi threshold first — hinglish at >0.25 would otherwise shadow hi
   if (ratio > 0.6) return { language: "hi", code_mix_ratio: Math.round(ratio * 100) / 100 };
+  if (ratio > 0.25) return { language: "hinglish", code_mix_ratio: Math.round(ratio * 100) / 100 };
   return { language: "en", code_mix_ratio: 0 };
 }
 
@@ -148,10 +160,10 @@ export function heuristicTaxonomy(stem: string, sampleIdx = 0): TaxonomyOut {
   const concepts = detectConcepts(stem, chapter);
   // sample 0 and 1 agree; sample 2 occasionally disagrees to simulate
   // self-consistency noise (drives the disagreement panel + human routing)
-  if (sampleIdx === 2 && Math.random() < 0.25) {
-    // pick a different plausible chapter
+  if (sampleIdx === 2 && seededUnit(stem, "tax") < 0.25) {
     const altChapters = CHAPTERS.filter((c) => c !== chapter);
-    return { chapter: altChapters[Math.floor(Math.random() * altChapters.length)], concepts };
+    const pick = Math.floor(seededUnit(stem, "tax-pick") * altChapters.length) % altChapters.length;
+    return { chapter: altChapters[pick], concepts };
   }
   return { chapter, concepts };
 }
@@ -159,7 +171,7 @@ export function heuristicTaxonomy(stem: string, sampleIdx = 0): TaxonomyOut {
 export function heuristicDifficulty(stem: string, sampleIdx = 0): DifficultyOut {
   const d = detectDifficulty(stem);
   // sample 2 occasionally flips difficulty to simulate disagreement
-  if (sampleIdx === 2 && Math.random() < 0.2) {
+  if (sampleIdx === 2 && seededUnit(stem, "diff") < 0.2) {
     const flips = { easy: "medium", medium: "hard", hard: "medium" } as const;
     return {
       difficulty: flips[d.difficulty],

@@ -34,12 +34,22 @@ export function PipelineHealth() {
     const load = async () => {
       try {
         const res = await fetch("/api/health");
-        if (!cancelled && res.ok) {
-          const data = await res.json();
-          setHealth(data);
-        }
+        const data = (await res.json()) as HealthStatus;
+        if (!cancelled) setHealth(data);
       } catch {
-        /* ignore */
+        if (!cancelled) {
+          setHealth({
+            status: "down",
+            jobs: 0,
+            activeJobs: 0,
+            totalUnits: 0,
+            pendingUnits: 0,
+            labeledUnits: 0,
+            reviewedUnits: 0,
+            agentsAvailable: 0,
+            dbConnected: false,
+          });
+        }
       }
     };
     load();
@@ -73,7 +83,6 @@ export function PipelineHealth() {
   return (
     <Card className="border-border/60 card-hover">
       <CardContent className="p-4">
-        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className={cn("rounded-md p-1.5", statusConfig.bg)}>
@@ -87,7 +96,6 @@ export function PipelineHealth() {
           </Badge>
         </div>
 
-        {/* Metrics grid */}
         <div className="grid grid-cols-4 gap-2">
           <HealthMetric
             icon={Cpu}

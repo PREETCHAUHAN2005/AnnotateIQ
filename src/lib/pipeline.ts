@@ -115,7 +115,7 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
       agent,
       sampleIdx,
       attempt,
-      payload: value ?? { __fallback: true, ...(fallback() as object) },
+      payload: value == null ? { __fallback: true, ...(final as object) } : final,
       latencyMs,
     });
     bus.publish(jobId, "agent:done", {
@@ -372,6 +372,10 @@ export async function runPipeline(jobId: string): Promise<void> {
         try {
           await processUnit(jobId, unit.id);
         } catch (err) {
+          await db.unit.update({
+            where: { id: unit.id },
+            data: { status: "failed" },
+          }).catch(() => {});
           bus.publish(jobId, "unit:error", {
             unitId: unit.id,
             seq: unit.seq,
@@ -392,11 +396,13 @@ export async function runPipeline(jobId: string): Promise<void> {
     const finals = await db.final.findMany({ where: { jobId } });
     const auto = finals.filter((f) => f.route === "auto").length;
     const human = finals.filter((f) => f.route === "human").length;
+    // done when nothing left for humans; otherwise wait in review queue
+    const status = human === 0 ? "done" : "review";
     await db.job.update({
       where: { id: jobId },
-      data: { status: "review", autoCount: auto, humanCount: human, unitCount: units.length },
+      data: { status, autoCount: auto, humanCount: human, unitCount: units.length },
     });
-    bus.publish(jobId, "job:status", { status: "review", auto, human, total: units.length });
+    bus.publish(jobId, "job:status", { status, auto, human, total: units.length });
   } catch (err) {
     await db.job.update({ where: { id: jobId }, data: { status: "failed" } });
     bus.publish(jobId, "job:status", {
