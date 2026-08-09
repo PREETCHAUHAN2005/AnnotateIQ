@@ -3,7 +3,6 @@
 import type { Job } from "@/lib/types";
 import type { ViewKey } from "@/app/page";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Atom,
   Gauge,
@@ -66,11 +65,12 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background bg-grid">
+    <div className="h-screen overflow-hidden flex flex-col bg-background bg-grid">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-card/80 backdrop-blur-xl">
+      <header className="shrink-0 z-40 border-b border-border/60 bg-card/80 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-3 px-4">
           <button
+            type="button"
             className="md:hidden p-2 -ml-2 rounded-md hover:bg-accent"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle nav"
@@ -121,22 +121,28 @@ export function AppShell({
         </div>
       </header>
 
-      <div className="flex-1 flex">
-        {/* Sidebar */}
+      <div className="flex-1 flex min-h-0">
+        {/* Sidebar — own scroll, does not drive main content */}
         <aside
           className={cn(
-            "fixed md:sticky top-14 z-30 w-64 shrink-0 border-r border-border/60 bg-sidebar/80 backdrop-blur-xl h-[calc(100vh-3.5rem)] transition-transform",
+            "fixed md:sticky md:top-0 z-30 w-64 shrink-0 border-r border-border/60 bg-sidebar/95 backdrop-blur-xl",
+            "h-[calc(100vh-3.5rem)] md:h-full transition-transform",
             mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           )}
         >
-          <div className="flex flex-col h-full">
-            <nav className="flex-1 p-3 space-y-1">
+          <div className="flex flex-col h-full min-h-0 overflow-hidden">
+            <nav
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-0.5"
+              aria-label="Primary"
+              onWheel={(e) => e.stopPropagation()}
+            >
               {NAV.map((item) => {
                 const Icon = item.icon;
                 const active = view === item.key;
                 return (
                   <button
                     key={item.key}
+                    type="button"
                     onClick={() => {
                       onViewChange(item.key);
                       setMobileOpen(false);
@@ -148,17 +154,19 @@ export function AppShell({
                         : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     )}
                   >
-                    {/* Active indicator bar */}
                     {active && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r-full bg-primary" />
                     )}
                     <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
-                    <span className="font-medium">{item.label}</span>
-                    {/* Keyboard shortcut hint (show on hover) */}
-                    <kbd className={cn(
-                      "ml-auto text-[9px] font-mono px-1 py-0.5 rounded transition-opacity",
-                      active ? "bg-primary/20 text-primary opacity-100" : "bg-muted text-muted-foreground opacity-0 group-hover:opacity-100"
-                    )}>
+                    <span className="font-medium truncate">{item.label}</span>
+                    <kbd
+                      className={cn(
+                        "ml-auto text-[9px] font-mono px-1 py-0.5 rounded transition-opacity shrink-0",
+                        active
+                          ? "bg-primary/20 text-primary opacity-100"
+                          : "bg-muted text-muted-foreground opacity-0 group-hover:opacity-100"
+                      )}
+                    >
                       g {item.shortcut}
                     </kbd>
                   </button>
@@ -166,58 +174,59 @@ export function AppShell({
               })}
             </nav>
 
-            {/* Jobs list in sidebar */}
-            <div className="border-t border-border/60 p-3">
+            {/* Recent jobs — separate scroll region */}
+            <div className="shrink-0 border-t border-border/60 p-3 bg-sidebar/80">
               <div className="flex items-center gap-2 px-2 mb-2">
                 <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Recent Jobs
                 </span>
               </div>
-              <ScrollArea className="h-40">
-                <div className="space-y-1 pr-2">
-                  {jobs.length === 0 && (
-                    <p className="text-xs text-muted-foreground px-2 py-3">No jobs yet.</p>
-                  )}
-                  {jobs.map((j) => {
-                    const isActive = activeJob?.id === j.id;
-                    return (
-                      <button
-                        key={j.id}
-                        onClick={() => {
-                          onSelectJob(j.id);
-                          setMobileOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2.5 py-2 rounded-md text-xs transition group",
-                          isActive ? "bg-accent text-foreground" : "hover:bg-accent/60 text-muted-foreground"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <StatusDot status={j.status} />
-                          <span className="truncate font-medium">{j.filename}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                          <span>{j.unitCount} units</span>
-                          {j.status === "review" || j.status === "done" ? (
-                            <>
-                              <span>·</span>
-                              <span className="text-primary">{j.autoCount} auto</span>
-                              <span>·</span>
-                              <span className="text-foreground/60">{j.humanCount} human</span>
-                            </>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+              <div
+                className="max-h-36 overflow-y-auto overscroll-contain space-y-1 pr-1"
+                onWheel={(e) => e.stopPropagation()}
+              >
+                {jobs.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-2 py-3">No jobs yet.</p>
+                )}
+                {jobs.map((j) => {
+                  const isActive = activeJob?.id === j.id;
+                  return (
+                    <button
+                      key={j.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectJob(j.id);
+                        setMobileOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-2.5 py-2 rounded-md text-xs transition",
+                        isActive ? "bg-accent text-foreground" : "hover:bg-accent/60 text-muted-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <StatusDot status={j.status} />
+                        <span className="truncate font-medium">{j.filename}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                        <span>{j.unitCount} units</span>
+                        {j.status === "review" || j.status === "done" ? (
+                          <>
+                            <span>·</span>
+                            <span className="text-primary">{j.autoCount} auto</span>
+                            <span>·</span>
+                            <span className="text-foreground/60">{j.humanCount} human</span>
+                          </>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </aside>
 
-        {/* Overlay for mobile */}
         {mobileOpen && (
           <div
             className="fixed inset-0 top-14 z-20 bg-black/50 md:hidden"
@@ -225,26 +234,11 @@ export function AppShell({
           />
         )}
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0 pb-16">
+        {/* Main content — independent scroll */}
+        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto overscroll-contain">
           <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</div>
         </main>
       </div>
-
-      {/* Quiet status bar — metrics live in Architecture / Quality, not here */}
-      <footer className="fixed bottom-0 inset-x-0 z-30 border-t border-border/50 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-        <div className="flex h-10 items-center justify-between gap-4 pl-14 pr-4 sm:px-6 md:pl-6">
-          <p className="text-[11px] text-muted-foreground/80 truncate tracking-wide">
-            Annotate<span className="text-foreground/70">IQ</span>
-            <span className="mx-2 text-border">·</span>
-            <span className="hidden sm:inline">Multi-agent JEE Physics annotation</span>
-            <span className="sm:hidden">JEE Physics</span>
-          </p>
-          <p className="shrink-0 text-[10px] font-mono text-muted-foreground/60 tabular-nums hidden sm:block">
-            conf ≥ 0.85
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

@@ -21,13 +21,19 @@ export const metadata: Metadata = {
     "Multi-agent data annotation pipeline for Indian competitive-exam content. Agents label in parallel, a critic validates, low-confidence units go to human review.",
 };
 
+/** Runs before paint — prevents light/dark flash without a React <script> child. */
+const themeInitScript = `(function(){try{var t=localStorage.getItem('annotateiq-theme');if(t!=='light'&&t!=='dark')t='dark';var r=document.documentElement;r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;}catch(e){document.documentElement.classList.add('dark');}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
