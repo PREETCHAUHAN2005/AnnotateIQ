@@ -1,0 +1,12 @@
+{
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/jobs/[id]/run/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/jobs/[id]/stream/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}
