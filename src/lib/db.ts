@@ -16,21 +16,18 @@ function ensureWritableSqlite() {
 
   const filePath = url.replace(/^file:/, "");
   // Only auto-seed absolute /tmp paths (Vercel demo mode)
-  if (!filePath.startsWith("/tmp/") && !filePath.startsWith("\\tmp\\")) return;
-  if (existsSync(filePath)) return;
+  if (!filePath.startsWith("/tmp/")) return;
+  if (existsSync(/*turbopackIgnore: true*/ filePath)) return;
 
   const dir = path.dirname(filePath);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  if (!existsSync(/*turbopackIgnore: true*/ dir)) {
+    mkdirSync(/*turbopackIgnore: true*/ dir, { recursive: true });
+  }
 
-  const seedCandidates = [
-    path.join(process.cwd(), "db", "custom.db"),
-    path.join(process.cwd(), "prisma", "custom.db"),
-  ];
-  for (const seed of seedCandidates) {
-    if (existsSync(seed)) {
-      copyFileSync(seed, filePath);
-      return;
-    }
+  // Statically scoped to ./db so tracing does not pull the whole repo
+  const seed = path.join(process.cwd(), "db", "custom.db");
+  if (existsSync(/*turbopackIgnore: true*/ seed)) {
+    copyFileSync(/*turbopackIgnore: true*/ seed, /*turbopackIgnore: true*/ filePath);
   }
 }
 
