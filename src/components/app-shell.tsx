@@ -92,21 +92,30 @@ export function AppShell({
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             {activeJob && (
-              <Badge variant="outline" className="hidden sm:inline-flex gap-1.5 font-mono text-xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                {activeJob.filename.slice(0, 22)}
-                {activeJob.filename.length > 22 ? "…" : ""}
+              <Badge variant="outline" className="hidden sm:inline-flex gap-1.5 font-mono text-xs max-w-[200px]">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                <span className="truncate">
+                  {activeJob.filename.slice(0, 22)}
+                  {activeJob.filename.length > 22 ? "…" : ""}
+                </span>
               </Badge>
             )}
             <button
+              type="button"
               onClick={onRefreshJobs}
               className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition"
               title="Refresh"
             >
               <RefreshCw className={cn("h-4 w-4", loadingJobs && "animate-spin")} />
             </button>
+            <kbd
+              className="hidden md:inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border/70 bg-muted/50 text-[10px] font-mono text-muted-foreground"
+              title="Open command palette"
+            >
+              ⌘K
+            </kbd>
             <ThemeToggle />
           </div>
         </div>
@@ -217,28 +226,23 @@ export function AppShell({
         )}
 
         {/* Main content */}
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 pb-16">
           <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</div>
         </main>
       </div>
 
-      {/* Sticky footer */}
-      <footer className="mt-auto border-t border-border/60 bg-card/60 backdrop-blur-sm">
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Atom className="h-3.5 w-3.5 text-primary" />
-            <span>AnnotateIQ — k=3 self-consistency · critic-gated · honeypot-verified</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono">threshold ≥ 0.85</span>
-            <span>·</span>
-            <span className="font-mono">MAX_ATTEMPTS = 2</span>
-            <span>·</span>
-            <span className="font-mono">K = 3</span>
-            <span>·</span>
-            <kbd className="font-mono px-1.5 py-0.5 rounded bg-muted border border-border text-[10px]">⌘K</kbd>
-            <span className="hidden sm:inline">command palette</span>
-          </div>
+      {/* Quiet status bar — metrics live in Architecture / Quality, not here */}
+      <footer className="fixed bottom-0 inset-x-0 z-30 border-t border-border/50 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+        <div className="flex h-10 items-center justify-between gap-4 pl-14 pr-4 sm:px-6 md:pl-6">
+          <p className="text-[11px] text-muted-foreground/80 truncate tracking-wide">
+            Annotate<span className="text-foreground/70">IQ</span>
+            <span className="mx-2 text-border">·</span>
+            <span className="hidden sm:inline">Multi-agent JEE Physics annotation</span>
+            <span className="sm:hidden">JEE Physics</span>
+          </p>
+          <p className="shrink-0 text-[10px] font-mono text-muted-foreground/60 tabular-nums hidden sm:block">
+            conf ≥ 0.85
+          </p>
         </div>
       </footer>
     </div>
