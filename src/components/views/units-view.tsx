@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { FinalRecord, Job } from "@/lib/types";
+import type { FinalRecord, Job, RiskLevel, UnitAnnotation } from "@/lib/types";
 import { api } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { eventSummary } from "@/lib/normalize";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -36,14 +35,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SortKey = "seq" | "confidence" | "chapter" | "difficulty";
+type SortKey = "seq" | "confidence" | "risk_label" | "action";
+
+function eventLine(p: UnitAnnotation) {
+  return p.event ? eventSummary(p.event) : p.unit_id;
+}
 
 export function UnitsView({ job }: { job: Job }) {
   const [finals, setFinals] = useState<FinalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [routeFilter, setRouteFilter] = useState<"all" | "auto" | "human">("all");
-  const [diffFilter, setDiffFilter] = useState<string>("all");
+  const [riskFilter, setRiskFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("seq");
   const [sortAsc, setSortAsc] = useState(true);
   const [selected, setSelected] = useState<FinalRecord | null>(null);
@@ -53,49 +56,66 @@ export function UnitsView({ job }: { job: Job }) {
     setLoading(true);
     api
       .getFinals(job.id)
-      .then((r) => { if (!cancelled) setFinals(r.finals); })
-      .catch((e) => { if (!cancelled) toast.error(e instanceof Error ? e.message : "load failed"); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((r) => {
+        if (!cancelled) setFinals(r.finals);
+      })
+      .catch((e) => {
+        if (!cancelled) toast.error(e instanceof Error ? e.message : "load failed");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [job.id]);
-
-  const chapters = useMemo(
-    () => Array.from(new Set(finals.map((f) => f.payload.chapter))).sort(),
-    [finals]
-  );
 
   const filtered = useMemo(() => {
     let out = [...finals];
     if (search.trim()) {
       const q = search.toLowerCase();
-      out = out.filter(
-        (f) =>
-          f.payload.stem.toLowerCase().includes(q) ||
-          f.payload.chapter.toLowerCase().includes(q) ||
-          f.payload.concepts.some((c) => c.toLowerCase().includes(q))
-      );
+      out = out.filter((f) => {
+        const p = f.payload;
+        return (
+          eventLine(p).toLowerCase().includes(q) ||
+          (p.risk_label ?? "").toLowerCase().includes(q) ||
+          (p.recommended_action ?? "").toLowerCase().includes(q) ||
+          (p.explanation ?? "").toLowerCase().includes(q) ||
+          (p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q))
+        );
+      });
     }
     if (routeFilter !== "all") out = out.filter((f) => f.route === routeFilter);
-    if (diffFilter !== "all") out = out.filter((f) => f.payload.difficulty === diffFilter);
+    if (riskFilter !== "all") out = out.filter((f) => f.payload.risk_label === riskFilter);
 
+    const rank: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
     out.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
-        case "seq": cmp = a.seq - b.seq; break;
-        case "confidence": cmp = a.confidence - b.confidence; break;
-        case "chapter": cmp = a.payload.chapter.localeCompare(b.payload.chapter); break;
-        case "difficulty":
-          cmp = { easy: 0, medium: 1, hard: 2 }[a.payload.difficulty] - { easy: 0, medium: 1, hard: 2 }[b.payload.difficulty];
+        case "seq":
+          cmp = a.seq - b.seq;
+          break;
+        case "confidence":
+          cmp = a.confidence - b.confidence;
+          break;
+        case "risk_label":
+          cmp = (rank[a.payload.risk_label] ?? 0) - (rank[b.payload.risk_label] ?? 0);
+          break;
+        case "action":
+          cmp = (a.payload.recommended_action ?? "").localeCompare(b.payload.recommended_action ?? "");
           break;
       }
       return sortAsc ? cmp : -cmp;
     });
     return out;
-  }, [finals, search, routeFilter, diffFilter, sortKey, sortAsc]);
+  }, [finals, search, routeFilter, riskFilter, sortKey, sortAsc]);
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortAsc(!sortAsc);
-    else { setSortKey(k); setSortAsc(true); }
+    else {
+      setSortKey(k);
+      setSortAsc(true);
+    }
   };
 
   const autoCount = finals.filter((f) => f.route === "auto").length;
@@ -107,10 +127,10 @@ export function UnitsView({ job }: { job: Job }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <TableProperties className="h-6 w-6 text-primary" /> Annotated Units
+            <TableProperties className="h-6 w-6 text-primary" /> Annotated events
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Browse, search, and inspect every annotated unit in this job.
+            Browse, search, and inspect every adjudicated payment event in this job.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -121,45 +141,53 @@ export function UnitsView({ job }: { job: Job }) {
         </div>
       </div>
 
-      {/* Filter bar */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search stem, chapter, or concepts..."
+                placeholder="Search txn id, merchant, risk label, action, factors..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
             <Select value={routeFilter} onValueChange={(v) => setRouteFilter(v as typeof routeFilter)}>
-              <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Route" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="Route" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All routes</SelectItem>
                 <SelectItem value="auto">Auto-accept</SelectItem>
                 <SelectItem value="human">Human review</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={diffFilter} onValueChange={setDiffFilter}>
-              <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Difficulty" /></SelectTrigger>
+            <Select value={riskFilter} onValueChange={setRiskFilter}>
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="Risk" />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All levels</SelectItem>
-                <SelectItem value="easy">Easy</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="hard">Hard</SelectItem>
+                <SelectItem value="all">All labels</SelectItem>
+                <SelectItem value="LOW">LOW</SelectItem>
+                <SelectItem value="MEDIUM">MEDIUM</SelectItem>
+                <SelectItem value="HIGH">HIGH</SelectItem>
+                <SelectItem value="CRITICAL">CRITICAL</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {(search || routeFilter !== "all" || diffFilter !== "all") && (
+          {(search || routeFilter !== "all" || riskFilter !== "all") && (
             <div className="flex items-center gap-2 mt-3 text-xs">
               <Filter className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">
-                Showing {filtered.length} of {finals.length} units
+                Showing {filtered.length} of {finals.length} events
               </span>
               <button
-                onClick={() => { setSearch(""); setRouteFilter("all"); setDiffFilter("all"); }}
+                onClick={() => {
+                  setSearch("");
+                  setRouteFilter("all");
+                  setRiskFilter("all");
+                }}
                 className="text-primary hover:underline ml-1"
               >
                 clear filters
@@ -169,7 +197,6 @@ export function UnitsView({ job }: { job: Job }) {
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
           {loading ? (
@@ -177,9 +204,7 @@ export function UnitsView({ job }: { job: Job }) {
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">
-              No units match the current filters.
-            </div>
+            <div className="text-center py-16 text-muted-foreground text-sm">No events match the current filters.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -188,14 +213,14 @@ export function UnitsView({ job }: { job: Job }) {
                     <th className="text-left p-3 font-medium">
                       <SortButton label="#" active={sortKey === "seq"} asc={sortAsc} onClick={() => toggleSort("seq")} />
                     </th>
-                    <th className="text-left p-3 font-medium">Stem</th>
+                    <th className="text-left p-3 font-medium">Event</th>
                     <th className="text-left p-3 font-medium hidden md:table-cell">
-                      <SortButton label="Chapter" active={sortKey === "chapter"} asc={sortAsc} onClick={() => toggleSort("chapter")} />
+                      <SortButton label="Risk" active={sortKey === "risk_label"} asc={sortAsc} onClick={() => toggleSort("risk_label")} />
                     </th>
                     <th className="text-left p-3 font-medium hidden lg:table-cell">
-                      <SortButton label="Diff" active={sortKey === "difficulty"} asc={sortAsc} onClick={() => toggleSort("difficulty")} />
+                      <SortButton label="Action" active={sortKey === "action"} asc={sortAsc} onClick={() => toggleSort("action")} />
                     </th>
-                    <th className="text-left p-3 font-medium hidden sm:table-cell">Bloom</th>
+                    <th className="text-left p-3 font-medium hidden sm:table-cell">Consensus</th>
                     <th className="text-right p-3 font-medium">
                       <SortButton label="Conf" active={sortKey === "confidence"} asc={sortAsc} onClick={() => toggleSort("confidence")} />
                     </th>
@@ -217,22 +242,31 @@ export function UnitsView({ job }: { job: Job }) {
                       </td>
                       <td className="p-3 max-w-xs">
                         <div className="truncate text-foreground/90 group-hover:text-primary transition">
-                          {f.payload.stem.slice(0, 80)}{f.payload.stem.length > 80 ? "…" : ""}
+                          {eventLine(f.payload)}
                         </div>
-                        {f.payload.concepts.length > 0 && (
+                        {(f.payload.risk_factors ?? []).length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {f.payload.concepts.slice(0, 2).map((c, i) => (
-                              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{c}</span>
+                            {f.payload.risk_factors.slice(0, 2).map((c, i) => (
+                              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                {c}
+                              </span>
                             ))}
                           </div>
                         )}
                       </td>
-                      <td className="p-3 hidden md:table-cell text-xs">{f.payload.chapter}</td>
-                      <td className="p-3 hidden lg:table-cell">
-                        <DiffBadge difficulty={f.payload.difficulty} />
+                      <td className="p-3 hidden md:table-cell">
+                        <RiskBadge label={f.payload.risk_label} />
                       </td>
+                      <td className="p-3 hidden lg:table-cell text-xs font-mono">{f.payload.recommended_action}</td>
                       <td className="p-3 hidden sm:table-cell">
-                        <span className="text-xs text-muted-foreground capitalize">{f.payload.bloom}</span>
+                        <span
+                          className={cn(
+                            "text-xs font-mono",
+                            f.payload.consensus === "DISPUTED" ? "text-rose-400" : "text-muted-foreground"
+                          )}
+                        >
+                          {f.payload.consensus}
+                        </span>
                       </td>
                       <td className="p-3 text-right">
                         <ConfidenceBar value={f.confidence} />
@@ -257,7 +291,6 @@ export function UnitsView({ job }: { job: Job }) {
         </CardContent>
       </Card>
 
-      {/* Detail dialog */}
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {selected && (
@@ -265,7 +298,7 @@ export function UnitsView({ job }: { job: Job }) {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-base">
                   <Hash className="h-4 w-4 text-primary" />
-                  Unit #{selected.seq}
+                  Event #{selected.seq}
                   {selected.isHoneypot && (
                     <Badge variant="outline" className="gap-1 border-foreground/20 text-foreground/60 ml-2">
                       <AlertTriangle className="h-3 w-3" /> honeypot
@@ -284,56 +317,51 @@ export function UnitsView({ job }: { job: Job }) {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Question stem</div>
-                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60 text-sm leading-relaxed">
-                    {selected.payload.stem}
+                  <div className="text-xs text-muted-foreground mb-1">Payment event</div>
+                  <div className="p-3 rounded-lg bg-muted/40 border border-border/60 text-sm leading-relaxed font-mono">
+                    {eventLine(selected.payload)}
                   </div>
-                  {selected.payload.options && (
-                    <div className="mt-2 space-y-1">
-                      {selected.payload.options.map((o, i) => (
-                        <div key={i} className="text-xs font-mono text-muted-foreground pl-3">
-                          ({String.fromCharCode(97 + i)}) {o}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <DetailItem label="Chapter" value={selected.payload.chapter} />
-                  <DetailItem label="Difficulty" value={selected.payload.difficulty} />
-                  <DetailItem label="Bloom level" value={selected.payload.bloom} />
-                  <DetailItem label="Language" value={selected.payload.language} />
-                  <DetailItem label="Has equation" value={String(selected.payload.has_equation)} />
-                  <DetailItem label="Code-mix ratio" value={selected.payload.code_mix_ratio.toFixed(2)} />
+                  <DetailItem label="Risk label" value={selected.payload.risk_label} />
+                  <DetailItem label="Recommended action" value={selected.payload.recommended_action} />
+                  <DetailItem label="Final label" value={selected.payload.final_label} />
+                  <DetailItem label="Consensus" value={selected.payload.consensus} />
+                  <DetailItem label="Chargeback risk" value={selected.payload.chargeback_risk} />
+                  <DetailItem label="Behavioral pattern" value={selected.payload.behavioral_pattern} />
                 </div>
 
                 <div>
-                  <div className="text-xs text-muted-foreground mb-1">Concepts</div>
+                  <div className="text-xs text-muted-foreground mb-1">Risk factors</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {selected.payload.concepts.map((c, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">{c}</Badge>
+                    {(selected.payload.risk_factors ?? []).map((c, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {c}
+                      </Badge>
                     ))}
                   </div>
                 </div>
 
-                {selected.payload.latex.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Explanation</div>
+                  <div className="p-2 rounded bg-muted/40 text-xs italic text-foreground/80">
+                    {selected.payload.explanation}
+                  </div>
+                </div>
+
+                {(selected.payload.evidence ?? []).length > 0 && (
                   <div>
-                    <div className="text-xs text-muted-foreground mb-1">LaTeX</div>
+                    <div className="text-xs text-muted-foreground mb-1">Evidence</div>
                     <div className="space-y-1">
-                      {selected.payload.latex.map((l, i) => (
-                        <code key={i} className="block p-2 rounded bg-muted/60 text-xs font-mono text-primary">{l}</code>
+                      {selected.payload.evidence.map((e, i) => (
+                        <div key={i} className="text-xs font-mono p-2 rounded bg-muted/40">
+                          {e.feature}: {e.observation} · {e.impact}
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
-
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Difficulty rationale</div>
-                  <div className="p-2 rounded bg-muted/40 text-xs italic text-foreground/80">
-                    "{selected.payload.difficulty_rationale}"
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
                   <div className="flex items-center gap-2">
@@ -350,7 +378,9 @@ export function UnitsView({ job }: { job: Job }) {
                   <div className="flex items-center gap-2 text-xs pt-2 border-t border-border/60">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-muted-foreground">Reviewed:</span>
-                    <Badge variant="outline" className="text-xs">{selected.reviewerAction}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selected.reviewerAction}
+                    </Badge>
                     {selected.reviewedBy && <span className="text-muted-foreground">by {selected.reviewedBy}</span>}
                   </div>
                 )}
@@ -364,11 +394,12 @@ export function UnitsView({ job }: { job: Job }) {
 }
 
 function MiniStat({ label, value, tone }: { label: string; value: string | number; tone?: "emerald" | "amber" | "teal" }) {
-  const cls = {
-    emerald: "text-foreground",
-    amber: "text-foreground/60",
-    teal: "text-foreground/80",
-  }[tone ?? "" as never] ?? "text-foreground";
+  const cls =
+    {
+      emerald: "text-foreground",
+      amber: "text-foreground/60",
+      teal: "text-foreground/80",
+    }[tone ?? ("" as never)] ?? "text-foreground";
   return (
     <div className="text-center px-3 py-1.5 rounded-lg bg-muted/40 border border-border/40">
       <div className={cn("text-sm font-bold tabular-nums", cls)}>{value}</div>
@@ -386,13 +417,18 @@ function SortButton({ label, active, asc, onClick }: { label: string; active: bo
   );
 }
 
-function DiffBadge({ difficulty }: { difficulty: string }) {
+function RiskBadge({ label }: { label: RiskLevel | string }) {
   const cls = {
-    easy: "border-foreground/30 text-foreground bg-foreground/5",
-    medium: "border-foreground/20 text-foreground/60 bg-foreground/5",
-    hard: "border-rose-500/40 text-rose-400 bg-rose-500/5",
-  }[difficulty] ?? "";
-  return <Badge variant="outline" className={cn("text-xs capitalize", cls)}>{difficulty}</Badge>;
+    LOW: "border-foreground/30 text-foreground bg-foreground/5",
+    MEDIUM: "border-foreground/20 text-foreground/70 bg-foreground/5",
+    HIGH: "border-amber-500/40 text-amber-400 bg-amber-500/5",
+    CRITICAL: "border-rose-500/40 text-rose-400 bg-rose-500/5",
+  }[label] ?? "";
+  return (
+    <Badge variant="outline" className={cn("text-xs font-mono", cls)}>
+      {label}
+    </Badge>
+  );
 }
 
 function ConfidenceBar({ value }: { value: number }) {
@@ -412,7 +448,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-sm font-medium capitalize">{value}</div>
+      <div className="text-sm font-medium font-mono">{value}</div>
     </div>
   );
 }

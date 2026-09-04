@@ -5,10 +5,8 @@ import { fleissKappa, kappaVerdict } from "@/lib/scoring";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/compare — compare stats across all jobs for the comparison view.
 export async function GET(_req: NextRequest) {
   const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" } });
-
   const comparison = [];
   for (const job of jobs) {
     const finals = await db.final.findMany({ where: { jobId: job.id } });
@@ -17,30 +15,24 @@ export async function GET(_req: NextRequest) {
     const human = finals.filter((f) => f.route === "human").length;
     const reviewed = finals.filter((f) => f.reviewerAction).length;
     const avgConf = finals.length ? finals.reduce((a, f) => a + f.confidence, 0) / finals.length : 0;
-
-    // honeypot stats
     const honeypotUnits = units.filter((u) => u.isHoneypot);
     const events = await db.qualityEvent.findMany({ where: { jobId: job.id } });
     const hpPass = events.filter((e) => e.kind === "honeypot_pass").length;
     const hpFail = events.filter((e) => e.kind === "honeypot_fail").length;
 
-    // difficulty distribution
-    const distDifficulty: Record<string, number> = { easy: 0, medium: 0, hard: 0 };
+    const distRisk: Record<string, number> = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
     for (const f of finals) {
-      const p = JSON.parse(f.payload) as { difficulty: string };
-      distDifficulty[p.difficulty] = (distDifficulty[p.difficulty] ?? 0) + 1;
+      const p = JSON.parse(f.payload) as { risk_label?: string };
+      distRisk[p.risk_label ?? "LOW"] = (distRisk[p.risk_label ?? "LOW"] ?? 0) + 1;
     }
 
-    // fleiss kappa for chapter
-    const drafts = await db.draft.findMany({
-      where: { unitId: { in: units.map((u) => u.id) } },
-    });
-    const chapterRatings: string[][] = [];
+    const drafts = await db.draft.findMany({ where: { unitId: { in: units.map((u) => u.id) } } });
+    const labelRatings: string[][] = [];
     for (const u of units) {
-      const tax = drafts.filter((d) => d.unitId === u.id && d.agent === "taxonomy" && d.attempt === 1);
-      if (tax.length >= 2) chapterRatings.push(tax.map((d) => (JSON.parse(d.payload) as { chapter: string }).chapter));
+      const rows = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
+      if (rows.length >= 2) labelRatings.push(rows.map((d) => (JSON.parse(d.payload) as { risk_label: string }).risk_label));
     }
-    const kappaChapter = fleissKappa(chapterRatings);
+    const kappaRisk = fleissKappa(labelRatings);
 
     comparison.push({
       id: job.id,
@@ -57,10 +49,9 @@ export async function GET(_req: NextRequest) {
       honeypotPass: hpPass,
       honeypotFail: hpFail,
       honeypotAccuracy: hpPass + hpFail > 0 ? hpPass / (hpPass + hpFail) : 0,
-      kappaChapter: { value: kappaChapter, ...kappaVerdict(kappaChapter) },
-      distDifficulty,
+      kappaRisk: { value: kappaRisk, ...kappaVerdict(kappaRisk) },
+      distRisk,
     });
   }
-
   return NextResponse.json({ jobs: comparison });
 }

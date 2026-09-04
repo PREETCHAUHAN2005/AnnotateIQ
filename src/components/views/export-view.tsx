@@ -110,18 +110,19 @@ export function ExportView({ job }: { job: Job }) {
         <CardContent>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
-              { field: "unit_id", type: "string", desc: "unique unit identifier" },
-              { field: "stem", type: "string", desc: "question text" },
-              { field: "options", type: "string[]", desc: "MCQ options or null" },
-              { field: "chapter", type: "string", desc: "NCERT chapter (closed vocab)" },
-              { field: "concepts", type: "string[]", desc: "1-4 key concepts" },
-              { field: "difficulty", type: "enum", desc: "easy | medium | hard" },
-              { field: "bloom", type: "enum", desc: "remember | understand | apply | analyze" },
-              { field: "difficulty_rationale", type: "string", desc: "grounded quote from stem" },
-              { field: "latex", type: "string[]", desc: "LaTeX expressions" },
-              { field: "has_equation", type: "boolean", desc: "contains math" },
-              { field: "language", type: "enum", desc: "en | hi | hinglish" },
-              { field: "code_mix_ratio", type: "float", desc: "0.0-1.0" },
+              { field: "unit_id", type: "string", desc: "unique event identifier" },
+              { field: "event", type: "object", desc: "canonical payment event" },
+              { field: "derived", type: "object", desc: "deterministic derived signals" },
+              { field: "risk_label", type: "enum", desc: "LOW | MEDIUM | HIGH | CRITICAL" },
+              { field: "recommended_action", type: "enum", desc: "ALLOW | REVIEW | STEP_UP | HOLD | REJECT" },
+              { field: "fraud_probability", type: "float", desc: "0.0-1.0" },
+              { field: "risk_factors", type: "string[]", desc: "closed-vocab factors" },
+              { field: "behavioral_pattern", type: "enum", desc: "NONE | VELOCITY_ANOMALY | …" },
+              { field: "chargeback_risk", type: "enum", desc: "LOW | MEDIUM | HIGH" },
+              { field: "evidence", type: "object[]", desc: "feature / observation / impact" },
+              { field: "explanation", type: "string", desc: "1-3 sentences citing features" },
+              { field: "final_label", type: "enum", desc: "adjudicated risk label" },
+              { field: "consensus", type: "enum", desc: "AGREED | DISPUTED" },
               { field: "confidence", type: "float", desc: "weakest-link score" },
               { field: "agreement", type: "float", desc: "min field agreement" },
               { field: "route", type: "enum", desc: "auto | human" },
@@ -214,7 +215,7 @@ export function ExportView({ job }: { job: Job }) {
               {excluded.map((f) => (
                 <div key={f.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/60 text-sm">
                   <Badge variant="outline" className="font-mono text-[10px]">#{f.seq}</Badge>
-                  <span className="flex-1 truncate">{f.payload.chapter}</span>
+                  <span className="flex-1 truncate font-mono">{f.payload.risk_label} · {f.payload.recommended_action}</span>
                   <span className="text-xs text-muted-foreground">
                     {f.reviewerAction === "reject" ? "rejected" : "unreviewed"}
                   </span>

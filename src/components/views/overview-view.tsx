@@ -44,15 +44,15 @@ export function OverviewView({
           <div className="flex flex-col lg:flex-row items-start gap-6">
             <div className="flex-1">
               <Badge variant="outline" className="mb-3 gap-1.5 border-primary/30 text-primary">
-                <Atom className="h-3 w-3" /> JEE Physics · Multi-agent
+                <Atom className="h-3 w-3" /> Payment risk · Multi-agent
               </Badge>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Annotate questions at <span className="text-gradient-emerald">production grade</span>
+                Annotate payment risk at <span className="text-gradient-emerald">inspectable grade</span>
               </h1>
               <p className="mt-3 text-muted-foreground max-w-2xl">
-                Four specialist agents label each unit in parallel. A critic validates against a rubric.
-                Low-confidence units route to a human review queue. Every decision is inspectable —
-                down to which agent disagreed.
+                Four specialists score each payment event. A fraud-reasoning agent proposes a label.
+                An adjudicator marks AGREED or DISPUTED. Low-confidence and disputed units go to humans.
+                Synthetic or public-shaped data only — not Razorpay production transactions.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button onClick={onGoToJobs} className="gap-2">
@@ -64,7 +64,7 @@ export function OverviewView({
               </div>
               {/* Feature pills */}
               <div className="mt-4 flex flex-wrap gap-2">
-                {["k=3 self-consistency", "critic-gated", "honeypot-verified", "weakest-link scoring"].map((pill) => (
+                {["k=3 fraud reasoning", "adjudicator-gated", "honeypot-verified", "weakest-link scoring"].map((pill) => (
                   <span key={pill} className="text-[10px] font-mono px-2 py-1 rounded-full bg-primary/5 border border-primary/20 text-primary/80">
                     {pill}
                   </span>
@@ -79,10 +79,10 @@ export function OverviewView({
                   Pipeline
                 </div>
                 {[
-                  { label: "Ingest & segment", icon: Layers, tone: "text-muted-foreground" },
-                  { label: "Fan-out · 8 agents/unit", icon: Cpu, tone: "text-primary" },
-                  { label: "Merge · weakest-link score", icon: GitBranch, tone: "text-foreground/80" },
-                  { label: "Critic · rubric gate", icon: ShieldCheck, tone: "text-foreground/60" },
+                  { label: "Normalize payment event", icon: Layers, tone: "text-muted-foreground" },
+                  { label: "4 specialists in parallel", icon: Cpu, tone: "text-primary" },
+                  { label: "Fraud reasoning · k=3", icon: GitBranch, tone: "text-foreground/80" },
+                  { label: "Adjudicator · AGREED/DISPUTED", icon: ShieldCheck, tone: "text-foreground/60" },
                   { label: "Confidence ≥ 0.85 → auto", icon: Gauge, tone: "text-foreground" },
                 ].map((step, i) => {
                   const Icon = step.icon;

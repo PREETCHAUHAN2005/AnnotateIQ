@@ -73,14 +73,14 @@ export function CompareView() {
     );
   }
 
-  const shortName = (f: string) => f.replace(/\.pdf$/i, "").replace(/JEE_/i, "").replace(/_/g, " ").slice(0, 20);
+  const shortName = (f: string) => f.replace(/\.json$/i, "").replace(/_/g, " ").slice(0, 20);
 
   // best job by autoRate
   const best = jobs.reduce((a, b) => (b.autoRate > a.autoRate ? b : a));
 
   const autoRateData = jobs.map((j) => ({ name: shortName(j.filename), "Auto %": Math.round(j.autoRate * 100), "Human %": Math.round((1 - j.autoRate) * 100) }));
   const confData = jobs.map((j) => ({ name: shortName(j.filename), "Avg Confidence": Number(j.avgConfidence.toFixed(2)) }));
-  const kappaData = jobs.map((j) => ({ name: shortName(j.filename), "Fleiss κ": Number(j.kappaChapter.value.toFixed(3)) }));
+  const kappaData = jobs.map((j) => ({ name: shortName(j.filename), "Fleiss κ": Number(j.kappaRisk.value.toFixed(3)) }));
   const honeypotData = jobs.map((j) => ({ name: shortName(j.filename), Pass: j.honeypotPass, Fail: j.honeypotFail }));
 
   return (
@@ -128,7 +128,7 @@ export function CompareView() {
                   <th className="text-right p-3 font-medium">Human</th>
                   <th className="text-right p-3 font-medium">Auto %</th>
                   <th className="text-right p-3 font-medium">Avg Conf</th>
-                  <th className="text-right p-3 font-medium">κ Chapter</th>
+                  <th className="text-right p-3 font-medium">κ Risk</th>
                   <th className="text-right p-3 font-medium">Honeypot</th>
                 </tr>
               </thead>
@@ -149,8 +149,8 @@ export function CompareView() {
                     </td>
                     <td className="p-3 text-right font-mono tabular-nums">{j.avgConfidence.toFixed(2)}</td>
                     <td className="p-3 text-right">
-                      <span className={cn("font-mono tabular-nums", j.kappaChapter.tone === "good" && "text-foreground", j.kappaChapter.tone === "warn" && "text-foreground/60", j.kappaChapter.tone === "bad" && "text-rose-400")}>
-                        {j.kappaChapter.value.toFixed(3)}
+                      <span className={cn("font-mono tabular-nums", j.kappaRisk.tone === "good" && "text-foreground", j.kappaRisk.tone === "warn" && "text-foreground/60", j.kappaRisk.tone === "bad" && "text-rose-400")}>
+                        {j.kappaRisk.value.toFixed(3)}
                       </span>
                     </td>
                     <td className="p-3 text-right">

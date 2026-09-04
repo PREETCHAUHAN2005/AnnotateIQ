@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import type { Job } from "@/lib/types";
+import { useEffect, useState } from "react";
+import type { IeeeDatasetInfo, Job } from "@/lib/types";
 import { api } from "@/lib/api";
-import { SAMPLE_PAPERS } from "@/lib/data/sample-papers";
+import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FileText, Play, FileUp, ScanLine, Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
+import { FileText, Play, FileUp, ScanLine, ShieldAlert, Loader2, Trash2, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function JobsView({
@@ -32,15 +32,33 @@ export function JobsView({
 }) {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [ieee, setIeee] = useState<IeeeDatasetInfo | null>(null);
 
-  const createSample = async (paperId: string) => {
+  useEffect(() => {
+    api.getIeeeDataset().then(setIeee).catch(() => setIeee(null));
+  }, []);
+
+  const createSample = async (packId: string) => {
     setCreating(true);
     try {
-      const { job } = await api.createJob({ mode: "sample", paperId });
+      const { job } = await api.createJob({ mode: "sample", paperId: packId, packId });
       onJobCreated(job);
       toast.success(`Created job from ${job.filename}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create job");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const createIeee = async () => {
+    setCreating(true);
+    try {
+      const { job } = await api.createJob({ mode: "ieee" });
+      onJobCreated(job);
+      toast.success(`Created IEEE-CIS-shaped job (${job.unitCount} events)`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "IEEE load failed");
     } finally {
       setCreating(false);
     }
@@ -63,27 +81,30 @@ export function JobsView({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Jobs & Upload</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Jobs & ingest</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Create a job from a curated JEE Physics paper or paste raw text. Each job is segmented into
-          units and run through the multi-agent pipeline.
+          Create a batch from synthetic payment packs, paste a JSON array of events, or load an IEEE-CIS-shaped
+          fixture. Public/synthetic data only — not Razorpay production transactions.
         </p>
       </div>
 
       <Tabs defaultValue="sample">
         <TabsList>
           <TabsTrigger value="sample" className="gap-2">
-            <FileText className="h-4 w-4" /> Sample papers
+            <FileText className="h-4 w-4" /> Dummy packs
           </TabsTrigger>
           <TabsTrigger value="paste" className="gap-2">
-            <FileUp className="h-4 w-4" /> Paste text
+            <FileUp className="h-4 w-4" /> Paste JSON
+          </TabsTrigger>
+          <TabsTrigger value="ieee" className="gap-2">
+            <Database className="h-4 w-4" /> IEEE-CIS
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sample" className="mt-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {SAMPLE_PAPERS.map((p) => {
-              const Icon = p.kind === "clean" ? FileText : p.kind === "scanned" ? ScanLine : ImageIcon;
+            {SAMPLE_BATCHES.map((p) => {
+              const Icon = p.kind === "clean" ? FileText : p.kind === "velocity" ? ScanLine : ShieldAlert;
               return (
                 <Card key={p.id} className="border-border/60 hover:border-primary/40 transition group">
                   <CardContent className="p-5">
@@ -96,15 +117,11 @@ export function JobsView({
                         <div className="text-xs text-muted-foreground mt-0.5">{p.description}</div>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge variant="outline" className="text-[10px]">{p.kind}</Badge>
-                          <Badge variant="outline" className="text-[10px]">{p.units.length} questions</Badge>
+                          <Badge variant="outline" className="text-[10px]">{p.units.length} events</Badge>
                         </div>
                       </div>
                     </div>
-                    <Button
-                      className="w-full mt-4 gap-2"
-                      onClick={() => createSample(p.id)}
-                      disabled={creating}
-                    >
+                    <Button className="w-full mt-4 gap-2" onClick={() => createSample(p.id)} disabled={creating}>
                       {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                       Create job
                     </Button>
@@ -118,19 +135,35 @@ export function JobsView({
         <TabsContent value="paste" className="mt-4">
           <PasteForm onJobCreated={onJobCreated} />
         </TabsContent>
+
+        <TabsContent value="ieee" className="mt-4">
+          <Card>
+            <CardContent className="p-5 space-y-3">
+              <div className="font-medium text-sm">IEEE-CIS shaped fixture</div>
+              <p className="text-xs text-muted-foreground">
+                This app never downloads Kaggle. Drop a JSON array at <code className="text-primary">data/ieee-cis-sample.json</code>{" "}
+                with columns like TransactionID, TransactionAmt, ProductCD, DeviceType. A small demo fixture ships in-repo.
+              </p>
+              <p className="text-xs text-muted-foreground">{ieee?.message ?? "Checking fixture…"}</p>
+              <Button onClick={createIeee} disabled={creating || !ieee?.available} className="gap-2">
+                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                Load IEEE-CIS sample ({ieee?.count ?? 0} rows)
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
-      {/* Job list */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">All jobs</CardTitle>
-          <CardDescription>{jobs.length} job{jobs.length !== 1 ? "s" : ""} total</CardDescription>
+          <CardDescription>
+            {jobs.length} job{jobs.length !== 1 ? "s" : ""} total
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {jobs.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-sm">
-              No jobs yet. Create one above.
-            </div>
+            <div className="text-center py-10 text-muted-foreground text-sm">No jobs yet. Create one above.</div>
           ) : (
             <div className="space-y-2">
               {jobs.map((j) => (
@@ -154,19 +187,19 @@ export function JobsView({
 
 function PasteForm({ onJobCreated }: { onJobCreated: (job: Job) => void }) {
   const [text, setText] = useState("");
-  const [filename, setFilename] = useState("pasted-paper.txt");
+  const [filename, setFilename] = useState("pasted-events.json");
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (text.trim().length < 10) {
-      toast.error("Paste at least one numbered question.");
+    if (text.trim().length < 2) {
+      toast.error("Paste a JSON array of payment events.");
       return;
     }
     setLoading(true);
     try {
       const { job } = await api.createJob({ mode: "paste", text, filename });
       onJobCreated(job);
-      toast.success(`Created job with ${job.unitCount} units`);
+      toast.success(`Created job with ${job.unitCount} events`);
       setText("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create job");
@@ -183,16 +216,16 @@ function PasteForm({ onJobCreated }: { onJobCreated: (job: Job) => void }) {
           <Input id="fname" value={filename} onChange={(e) => setFilename(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ptext">Raw paper text</Label>
+          <Label htmlFor="ptext">JSON array of events</Label>
           <Textarea
             id="ptext"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={"Paste questions here. Number them like:\n1. A body moves with velocity...\n2. A charge q is placed...\n3. ..."}
+            placeholder={'[\n  {"transaction_id":"TX_1","amount":1200,"payment_method":"upi","ip_region":"IN-MH","billing_region":"IN-MH"}\n]'}
             className="min-h-[200px] font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            Segmenter: regex on <code className="text-primary">^\s*(\d{"{1,3}"})[.)]\s</code>
+            Each object is normalized to the canonical payment event. Extra fields are ignored.
           </p>
         </div>
         <Button onClick={submit} disabled={loading} className="gap-2">
@@ -233,7 +266,7 @@ function JobRow({
         <div className="min-w-0">
           <div className="font-medium text-sm truncate">{job.filename}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {job.unitCount} units · {job.autoCount} auto · {job.humanCount} human · {job.reviewedCount} reviewed
+            {job.unitCount} events · {job.autoCount} auto · {job.humanCount} human · {job.reviewedCount} reviewed
           </div>
         </div>
       </button>

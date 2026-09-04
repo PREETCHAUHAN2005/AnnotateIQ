@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/search?q=xxx — search across all finals by stem/chapter/concept/difficulty
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim().toLowerCase() ?? "";
   if (q.length < 2) {
@@ -19,36 +18,35 @@ export async function GET(req: NextRequest) {
   const results = finals
     .map((f) => {
       const p = JSON.parse(f.payload) as {
-        stem: string;
-        chapter: string;
-        concepts: string[];
-        difficulty: string;
-        bloom: string;
-        language: string;
-        latex: string[];
+        event?: { transaction_id?: string; merchant_id?: string; amount?: number };
+        risk_label?: string;
+        recommended_action?: string;
+        risk_factors?: string[];
+        explanation?: string;
+        behavioral_pattern?: string;
       };
       const haystack = [
-        p.stem,
-        p.chapter,
-        p.concepts.join(" "),
-        p.difficulty,
-        p.bloom,
-        p.language,
-        p.latex.join(" "),
-      ].join(" ").toLowerCase();
+        p.event?.transaction_id,
+        p.event?.merchant_id,
+        p.event?.amount,
+        p.risk_label,
+        p.recommended_action,
+        (p.risk_factors ?? []).join(" "),
+        p.explanation,
+        p.behavioral_pattern,
+      ]
+        .join(" ")
+        .toLowerCase();
 
-      const matches = q.split(/\s+/).every((token) => haystack.includes(token));
+      if (!q.split(/\s+/).every((token) => haystack.includes(token))) return null;
 
-      if (!matches) return null;
-
-      // highlight which field matched
       const matchedFields: string[] = [];
-      if (p.stem.toLowerCase().includes(q)) matchedFields.push("stem");
-      if (p.chapter.toLowerCase().includes(q)) matchedFields.push("chapter");
-      if (p.concepts.some((c) => c.toLowerCase().includes(q))) matchedFields.push("concepts");
-      if (p.difficulty.toLowerCase().includes(q)) matchedFields.push("difficulty");
-      if (p.bloom.toLowerCase().includes(q)) matchedFields.push("bloom");
-      if (p.latex.some((l) => l.toLowerCase().includes(q))) matchedFields.push("latex");
+      if ((p.event?.transaction_id ?? "").toLowerCase().includes(q)) matchedFields.push("transaction_id");
+      if ((p.event?.merchant_id ?? "").toLowerCase().includes(q)) matchedFields.push("merchant_id");
+      if ((p.risk_label ?? "").toLowerCase().includes(q)) matchedFields.push("risk_label");
+      if ((p.recommended_action ?? "").toLowerCase().includes(q)) matchedFields.push("recommended_action");
+      if ((p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q))) matchedFields.push("risk_factors");
+      if ((p.explanation ?? "").toLowerCase().includes(q)) matchedFields.push("explanation");
 
       return {
         finalId: f.id,
@@ -56,7 +54,6 @@ export async function GET(req: NextRequest) {
         unitId: f.unitId,
         seq: f.unit.seq,
         isHoneypot: f.unit.isHoneypot,
-        filename: f.unit.jobId ? undefined : undefined, // job filename fetched separately if needed
         payload: p,
         confidence: f.confidence,
         agreement: f.agreement,
@@ -68,9 +65,5 @@ export async function GET(req: NextRequest) {
     .filter(Boolean)
     .slice(0, 50);
 
-  return NextResponse.json({
-    results,
-    total: results.length,
-    query: q,
-  });
+  return NextResponse.json({ results, total: results.length, query: q });
 }

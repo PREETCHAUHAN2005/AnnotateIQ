@@ -54,3 +54,7 @@ server.log
 /skills/
 .vercel
 .env*
+
+# local docs — keep markdown out of GitHub
+*.md
+*.docx

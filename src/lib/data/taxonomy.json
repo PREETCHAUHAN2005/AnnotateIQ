@@ -1,35 +1,25 @@
 {
-  "subject": "physics",
-  "version": 1,
-  "chapters": [
-    "Units and Measurements",
-    "Motion in a Straight Line",
-    "Motion in a Plane",
-    "Laws of Motion",
-    "Work, Energy and Power",
-    "System of Particles and Rotational Motion",
-    "Gravitation",
-    "Mechanical Properties of Solids",
-    "Mechanical Properties of Fluids",
-    "Thermal Properties of Matter",
-    "Thermodynamics",
-    "Kinetic Theory of Gases",
-    "Oscillations",
-    "Waves",
-    "Electric Charges and Fields",
-    "Electrostatic Potential and Capacitance",
-    "Current Electricity",
-    "Moving Charges and Magnetism",
-    "Magnetism and Matter",
-    "Electromagnetic Induction",
-    "Alternating Current",
-    "Electromagnetic Waves",
-    "Ray Optics and Optical Instruments",
-    "Wave Optics",
-    "Dual Nature of Radiation and Matter",
-    "Atoms",
-    "Nuclei",
-    "Semiconductor Electronics",
-    "Communication Systems"
-  ]
+  "domain": "payment_risk",
+  "version": 2,
+  "risk_labels": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+  "actions": ["ALLOW", "REVIEW", "STEP_UP_VERIFICATION", "HOLD", "REJECT"],
+  "risk_factors": [
+    "high_velocity",
+    "new_account",
+    "device_reuse",
+    "geo_mismatch",
+    "unusual_amount",
+    "chargeback_history",
+    "refund_pattern",
+    "merchant_anomaly",
+    "failed_attempts"
+  ],
+  "behavioral_patterns": [
+    "NONE",
+    "VELOCITY_ANOMALY",
+    "NEW_ACCOUNT_BURST",
+    "REPEAT_FAILURE",
+    "DORMANT_WAKE"
+  ],
+  "chargeback_levels": ["LOW", "MEDIUM", "HIGH"]
 }

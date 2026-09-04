@@ -41,10 +41,10 @@ type UnitState = {
 type LogEntry = { ts: number; type: string; text: string; tone: "info" | "ok" | "warn" | "err" };
 
 const AGENT_NODES = [
-  { id: "taxonomy", label: "Taxonomy", sub: "×3 · k=3", icon: Layers, tone: "emerald" as const },
-  { id: "difficulty", label: "Difficulty", sub: "×3 · k=3", icon: Gauge, tone: "teal" as const },
-  { id: "math", label: "Math", sub: "×1 · LaTeX", icon: Cpu, tone: "violet" as const },
-  { id: "language", label: "Language", sub: "×1 · hi/en", icon: Activity, tone: "amber" as const },
+  { id: "transaction_risk", label: "Txn risk", sub: "×1 · amount", icon: Gauge, tone: "emerald" as const },
+  { id: "behavioral", label: "Behavior", sub: "×1 · velocity", icon: Activity, tone: "teal" as const },
+  { id: "device_network", label: "Device", sub: "×1 · geo", icon: Cpu, tone: "violet" as const },
+  { id: "merchant_order", label: "Merchant", sub: "×1 · context", icon: Layers, tone: "amber" as const },
 ];
 
 export function PipelineView({
@@ -168,17 +168,17 @@ export function PipelineView({
         break;
       case "unit:merge":
         pushLog(
-          `Unit #${d.seq ?? "?"} merged → chapter ${d.mergedChapter} · ${d.mergedDifficulty}`,
+          `Event #${d.seq ?? "?"} merged → ${d.mergedLabel ?? "?"} · ${d.mergedAction ?? "?"}`,
           "info"
         );
         break;
       case "critic:done":
         if (d.passed) {
           setCriticPass((p) => p + 1);
-          pushLog(`Critic PASSED unit ${d.unitId}`, "ok");
+          pushLog(`Adjudicator PASSED event ${d.unitId} (${d.consensus ?? ""})`, "ok");
         } else {
           setCriticFail((p) => p + 1);
-          pushLog(`Critic FAILED unit ${d.unitId}: ${(d.failures as string[])?.join("; ")}`, "warn");
+          pushLog(`Adjudicator FAILED event ${d.unitId}: ${(d.failures as string[])?.join("; ")}`, "warn");
         }
         break;
       case "unit:retry":
@@ -267,7 +267,7 @@ export function PipelineView({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Live Pipeline</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Fan-out → merge → critic → confidence gate. SSE-streamed, per-unit.
+            Specialists → fraud reasoning → adjudicator. SSE-streamed, per event.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -298,8 +298,8 @@ export function PipelineView({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
             <MiniStat label="Auto-accepted" value={autoCount} tone="emerald" icon={CheckCircle2} />
             <MiniStat label="Human review" value={humanCount} tone="amber" icon={GitBranch} />
-            <MiniStat label="Critic pass" value={criticPass} tone="emerald" icon={ShieldCheck} />
-            <MiniStat label="Critic fail" value={criticFail} tone="rose" icon={XCircle} />
+            <MiniStat label="Adj. pass" value={criticPass} tone="emerald" icon={ShieldCheck} />
+            <MiniStat label="Adj. fail" value={criticFail} tone="rose" icon={XCircle} />
           </div>
         </CardContent>
       </Card>
@@ -311,7 +311,7 @@ export function PipelineView({
             <Cpu className="h-4 w-4 text-primary" /> Agent fan-out
           </CardTitle>
           <CardDescription>
-            Each unit spawns 8 parallel agent calls (taxonomy×3, difficulty×3, math×1, language×1) + 1 critic.
+            Four specialists in parallel, then fraud reasoning (k=3) and an adjudicator.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -320,7 +320,7 @@ export function PipelineView({
             <DiagramNode
               icon={Layers}
               label="Unit"
-              sub="1 question"
+              sub="1 event"
               tone="muted"
               active={running}
               count={undefined}
@@ -354,8 +354,8 @@ export function PipelineView({
             {/* Critic */}
             <DiagramNode
               icon={ShieldCheck}
-              label="Critic"
-              sub="rubric gate"
+              label="Adjudicator"
+              sub="AGREED / DISPUTED"
               tone="amber"
               active={running}
               count={criticPass + criticFail}

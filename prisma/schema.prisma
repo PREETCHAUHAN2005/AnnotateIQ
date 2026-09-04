@@ -1,5 +1,5 @@
-// AnnotateIQ — multi-agent annotation pipeline for JEE Physics
-// Adapted from §2 Postgres schema to SQLite
+// AnnotateIQ — multi-agent payment-risk annotation pipeline
+// SQLite store for jobs, units, drafts, finals, quality events
 
 generator client {
   provider      = "prisma-client-js"

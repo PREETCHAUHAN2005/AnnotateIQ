@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { bus } from "@/lib/events";
 
-// Install process-level handlers so an unhandled rejection in the fire-and-
-// forget pipeline never crashes the whole dev server.
 if (typeof process !== "undefined") {
   process.on("unhandledRejection", (reason) => {
     console.error("[pipeline] unhandledRejection:", reason);
@@ -11,32 +9,33 @@ if (typeof process !== "undefined") {
     console.error("[pipeline] uncaughtException:", err);
   });
 }
+
 import {
-  fallbackDifficulty,
-  fallbackLanguage,
-  fallbackMath,
-  fallbackTaxonomy,
-  runCritic,
-  runDifficulty,
-  runLanguage,
-  runMath,
-  runTaxonomy,
+  fallbackAdjudicator,
+  fallbackBehavioral,
+  fallbackDeviceNetwork,
+  fallbackFraudReasoning,
+  fallbackMerchantOrder,
+  fallbackTransactionRisk,
+  runAdjudicator,
+  runBehavioral,
+  runDeviceNetwork,
+  runFraudReasoning,
+  runMerchantOrder,
+  runTransactionRisk,
+  type SpecialistPacket,
   type UnitInput,
 } from "@/lib/agents";
-import {
-  CONCURRENCY,
-  K,
-  MAX_ATTEMPTS,
-  routeFor,
-  score,
-} from "@/lib/scoring";
-import { CHAPTERS } from "@/lib/schemas";
+import { computeDerivedSignals, parseUnitEvent } from "@/lib/normalize";
+import { CONCURRENCY, K, MAX_ATTEMPTS, routeFor, score } from "@/lib/scoring";
 import type {
-  CriticOut,
-  DifficultyOut,
-  LanguageOut,
-  MathOut,
-  TaxonomyOut,
+  AdjudicatorOut,
+  BehavioralOut,
+  DeviceNetworkOut,
+  FraudReasoningOut,
+  MerchantOrderOut,
+  RecommendedAction,
+  TransactionRiskOut,
   UnitAnnotation,
 } from "@/lib/schemas";
 
@@ -54,7 +53,6 @@ function majority<T extends string>(vals: T[]): T {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] as T;
 }
 
-/** Fan out all agents for one unit, run critic, score, persist, route. */
 export async function processUnit(jobId: string, unitId: string): Promise<void> {
   const unit = await db.unit.findUnique({ where: { id: unitId } });
   if (!unit) return;
@@ -66,26 +64,22 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
   });
   bus.publish(jobId, "unit:start", { unitId, seq: unit.seq, attempt });
 
-  const input: UnitInput = {
-    unitId,
-    stem: unit.stem || unit.rawText,
-    options: unit.optionsJson ? JSON.parse(unit.optionsJson) : null,
-  };
-
-  const critique = unit.rawText.includes("<critique>")
-    ? unit.rawText.match(/<critique>([\s\S]*?)<\/critique>/)?.[1]
-    : undefined;
+  const event = parseUnitEvent(unit.rawText, unit.stem);
+  const siblings = await db.unit.findMany({ where: { jobId }, select: { rawText: true } });
+  const sameDeviceInJob = event.device_id_hash
+    ? siblings.filter((s) => {
+        try {
+          return parseUnitEvent(s.rawText).device_id_hash === event.device_id_hash;
+        } catch {
+          return false;
+        }
+      }).length
+    : 1;
+  const derived = computeDerivedSignals(event, { sameDeviceInJob });
+  const input: UnitInput = { unitId, event, derived };
 
   const drafts: DraftRow[] = [];
-
-  // ---- Fan-out: taxonomy xK, difficulty xK, math x1, language x1 ----
-  // Each agent call is wrapped so a thrown error (rate-limit exhausted, etc.)
-  // degrades to a fallback instead of crashing the whole unit.
-  const tasks: Promise<void>[] = [];
-  const taxonomySamples: (TaxonomyOut | null)[] = [];
-  const difficultySamples: (DifficultyOut | null)[] = [];
-  let mathOut: MathOut | null = null;
-  let languageOut: LanguageOut | null = null;
+  const SKIP_LLM = process.env.SKIP_LLM === "1";
 
   const safe = async <T>(
     agent: string,
@@ -105,11 +99,13 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     } catch (e) {
       usedFallback = true;
       bus.publish(jobId, "agent:error", {
-        unitId, agent, sampleIdx,
+        unitId,
+        agent,
+        sampleIdx,
         error: e instanceof Error ? e.message : String(e),
       });
     }
-    const final = value ?? (usedFallback = true, fallback());
+    const final = value ?? ((usedFallback = true), fallback());
     sink(final);
     drafts.push({
       agent,
@@ -119,119 +115,170 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
       latencyMs,
     });
     bus.publish(jobId, "agent:done", {
-      unitId, agent, sampleIdx, latencyMs, ok: !!value && !usedFallback,
+      unitId,
+      agent,
+      sampleIdx,
+      latencyMs,
+      ok: !!value && !usedFallback,
     });
   };
 
-  const SKIP_LLM = process.env.SKIP_LLM === "1";
+  let txnOut: TransactionRiskOut | null = null;
+  let behOut: BehavioralOut | null = null;
+  let devOut: DeviceNetworkOut | null = null;
+  let merOut: MerchantOrderOut | null = null;
 
+  await Promise.all([
+    safe(
+      "transaction_risk",
+      0,
+      SKIP_LLM
+        ? async () => ({ value: null, raw: "", latencyMs: 0 })
+        : () => runTransactionRisk(input),
+      () => fallbackTransactionRisk(event, derived),
+      (v) => {
+        txnOut = v;
+      }
+    ),
+    safe(
+      "behavioral",
+      0,
+      SKIP_LLM ? async () => ({ value: null, raw: "", latencyMs: 0 }) : () => runBehavioral(input),
+      () => fallbackBehavioral(event, derived),
+      (v) => {
+        behOut = v;
+      }
+    ),
+    safe(
+      "device_network",
+      0,
+      SKIP_LLM
+        ? async () => ({ value: null, raw: "", latencyMs: 0 })
+        : () => runDeviceNetwork(input),
+      () => fallbackDeviceNetwork(event, derived),
+      (v) => {
+        devOut = v;
+      }
+    ),
+    safe(
+      "merchant_order",
+      0,
+      SKIP_LLM
+        ? async () => ({ value: null, raw: "", latencyMs: 0 })
+        : () => runMerchantOrder(input),
+      () => fallbackMerchantOrder(event, derived),
+      (v) => {
+        merOut = v;
+      }
+    ),
+  ]);
+
+  const specialists: SpecialistPacket = {
+    transaction_risk: txnOut?.transaction_risk ?? "MEDIUM",
+    behavior_anomaly: behOut?.behavior_anomaly ?? false,
+    behavioral_pattern: behOut?.behavioral_pattern ?? "NONE",
+    device_risk: devOut?.device_risk ?? "LOW",
+    merchant_context_risk: merOut?.merchant_context_risk ?? "LOW",
+  };
+
+  const reasonSamples: (FraudReasoningOut | null)[] = [];
+  const reasonTasks: Promise<void>[] = [];
   for (let i = 0; i < K; i++) {
     const idx = i;
-    tasks.push(
-      safe("taxonomy", idx, SKIP_LLM ? async () => ({ value: null, raw: "", latencyMs: 0 }) : () => runTaxonomy(input), () => fallbackTaxonomy(input.stem, idx), (v) => { taxonomySamples[idx] = v; })
-    );
-    tasks.push(
-      safe("difficulty", idx, SKIP_LLM ? async () => ({ value: null, raw: "", latencyMs: 0 }) : () => runDifficulty(input), () => fallbackDifficulty(input.stem, idx), (v) => { difficultySamples[idx] = v; })
+    reasonTasks.push(
+      safe(
+        "fraud_reasoning",
+        idx,
+        SKIP_LLM
+          ? async () => ({ value: null, raw: "", latencyMs: 0 })
+          : () => runFraudReasoning(input, specialists),
+        () => fallbackFraudReasoning(event, derived, specialists, idx),
+        (v) => {
+          reasonSamples[idx] = v;
+        }
+      )
     );
   }
-  tasks.push(
-    safe("math", 0, SKIP_LLM ? async () => ({ value: null, raw: "", latencyMs: 0 }) : () => runMath(input), () => fallbackMath(input.stem), (v) => { mathOut = v; })
-  );
-  tasks.push(
-    safe("language", 0, SKIP_LLM ? async () => ({ value: null, raw: "", latencyMs: 0 }) : () => runLanguage(input), () => fallbackLanguage(input.stem), (v) => { languageOut = v; })
-  );
+  await Promise.all(reasonTasks);
 
-  await Promise.all(tasks);
-
-  // ---- Merge: majority vote on sampled fields; disjoint spread otherwise ----
-  const validTax = taxonomySamples.filter(Boolean) as TaxonomyOut[];
-  const validDiff = difficultySamples.filter(Boolean) as DifficultyOut[];
-
-  const chapterSamples = validTax.map((t) => t.chapter);
-  const difficultyVals = validDiff.map((d) => d.difficulty);
-
-  // gather concepts from all taxonomy samples (dedupe, cap 4)
-  const conceptSet = new Set<string>();
-  for (const t of validTax) for (const c of t.concepts) conceptSet.add(c);
-  const concepts = Array.from(conceptSet).slice(0, 4);
-
-  const mergedChapter = majority(chapterSamples);
-  const mergedDifficulty = majority(difficultyVals);
-  // rationale from the first difficulty sample that matches the modal difficulty
-  const mergedDiff =
-    validDiff.find((d) => d.difficulty === mergedDifficulty) ?? validDiff[0];
+  const validReason = reasonSamples.filter(Boolean) as FraudReasoningOut[];
+  const labelSamples = validReason.map((r) => r.risk_label);
+  const actionSamples = validReason.map((r) => r.recommended_action);
+  const mergedLabel = majority(labelSamples);
+  const mergedAction = majority(actionSamples) as RecommendedAction;
+  const mergedReason =
+    validReason.find((r) => r.risk_label === mergedLabel && r.recommended_action === mergedAction) ??
+    validReason.find((r) => r.risk_label === mergedLabel) ??
+    validReason[0];
 
   bus.publish(jobId, "unit:merge", {
     unitId,
-    chapterSamples,
-    difficultySamples: difficultyVals,
-    mergedChapter,
-    mergedDifficulty,
+    riskSamples: labelSamples,
+    actionSamples,
+    mergedLabel,
+    mergedAction,
   });
 
-  // ---- Critic ---- (wrapped so a rate-limit failure doesn't crash the unit)
-  const mergedForCritic = {
-    chapter: mergedChapter,
-    concepts,
-    latex: mathOut?.latex ?? [],
-    difficulty_rationale: mergedDiff?.difficulty_rationale ?? "",
+  bus.publish(jobId, "agent:start", { unitId, agent: "adjudicator", sampleIdx: 0 });
+  let adj: AdjudicatorOut = {
+    passed: false,
+    failures: ["adjudicator: call failed"],
+    consensus: "DISPUTED",
+    final_label: mergedLabel,
+    recommended_action: mergedAction,
+    disagreement_reason: "adjudicator unavailable",
   };
-  bus.publish(jobId, "agent:start", { unitId, agent: "critic", sampleIdx: 0 });
-  let critic: CriticOut = { passed: false, failures: ["critic: call failed"] };
-  let criticLatency = 0;
+  let adjLatency = 0;
+  const mergedForAdj = {
+    risk_label: mergedLabel,
+    recommended_action: mergedAction,
+    explanation: mergedReason?.explanation ?? "",
+    risk_factors: mergedReason?.risk_factors ?? [],
+  };
+
   if (SKIP_LLM) {
-    // heuristic critic: chapter must be valid; rationale must quote stem text.
-    // The heuristic rationale wraps a verbatim stem fragment in quotes.
-    const validChapter = CHAPTERS.includes(mergedChapter);
-    const rationale = mergedDiff?.difficulty_rationale ?? "";
-    const stemLower = input.stem.toLowerCase();
-    // extract quoted phrases from rationale and check if any appears in stem
-    const quotes = rationale.match(/"([^"]+)"/g) ?? [];
-    const quotesStem = quotes.some((q) => {
-      const inner = q.replace(/"/g, "").toLowerCase().replace(/\.\.\.$/, "").trim();
-      return inner.length > 8 && stemLower.includes(inner);
-    });
-    const passed = validChapter && quotesStem;
-    const failures: string[] = [];
-    if (!validChapter) failures.push("critic: chapter not in taxonomy");
-    if (!quotesStem) failures.push("critic: rationale does not quote stem");
-    critic = { passed, failures };
-    criticLatency = 1;
+    adj = fallbackAdjudicator(specialists, mergedForAdj);
+    adjLatency = 1;
   } else {
     try {
-      const criticRes = await runCritic(input, mergedForCritic);
-      criticLatency = criticRes.latencyMs;
-      if (criticRes.value) critic = criticRes.value;
-      else critic = { passed: false, failures: ["critic: unparseable response"] };
+      const res = await runAdjudicator(input, specialists, mergedForAdj);
+      adjLatency = res.latencyMs;
+      if (res.value) adj = res.value;
+      else adj = fallbackAdjudicator(specialists, mergedForAdj);
     } catch (e) {
       bus.publish(jobId, "agent:error", {
-        unitId, agent: "critic", sampleIdx: 0,
+        unitId,
+        agent: "adjudicator",
+        sampleIdx: 0,
         error: e instanceof Error ? e.message : String(e),
       });
+      adj = fallbackAdjudicator(specialists, mergedForAdj);
     }
   }
+
   drafts.push({
-    agent: "critic",
+    agent: "adjudicator",
     sampleIdx: 0,
     attempt,
-    payload: critic,
-    latencyMs: criticLatency,
+    payload: adj,
+    latencyMs: adjLatency,
   });
   bus.publish(jobId, "critic:done", {
     unitId,
-    passed: critic.passed,
-    failures: critic.failures,
-    latencyMs: criticLatency,
+    passed: adj.passed,
+    failures: adj.failures,
+    consensus: adj.consensus,
+    latencyMs: adjLatency,
   });
 
-  // ---- Score ----
+  const disputed = adj.consensus === "DISPUTED";
   const { confidence, agreement } = score(
-    { chapter: chapterSamples, difficulty: difficultyVals },
-    critic.passed
+    { risk_label: labelSamples, recommended_action: actionSamples },
+    adj.passed,
+    disputed
   );
-  const route = routeFor(confidence);
+  const route = routeFor(confidence, disputed);
 
-  // ---- Persist drafts ----
   for (const d of drafts) {
     await db.draft.create({
       data: {
@@ -245,10 +292,19 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     });
   }
 
-  // ---- Quality events ----
-  if (!critic.passed) {
+  if (!adj.passed) {
     await db.qualityEvent.create({
-      data: { unitId, jobId, kind: "critic_fail", detail: JSON.stringify(critic.failures) },
+      data: { unitId, jobId, kind: "critic_fail", detail: JSON.stringify(adj.failures) },
+    });
+  }
+  if (disputed) {
+    await db.qualityEvent.create({
+      data: {
+        unitId,
+        jobId,
+        kind: "disagreement",
+        detail: JSON.stringify({ specialists, labels: labelSamples, actions: actionSamples }),
+      },
     });
   }
   if (agreement < 1) {
@@ -257,65 +313,75 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
         unitId,
         jobId,
         kind: "disagreement",
-        detail: JSON.stringify({ chapter: chapterSamples, difficulty: difficultyVals }),
+        detail: JSON.stringify({ labels: labelSamples, actions: actionSamples }),
       },
     });
   }
 
-  // ---- Honeypot check ----
   if (unit.isHoneypot && unit.goldPayload) {
-    const gold = JSON.parse(unit.goldPayload) as { chapter: string; difficulty: string };
-    const pass = gold.chapter === mergedChapter && gold.difficulty === mergedDifficulty;
+    const gold = JSON.parse(unit.goldPayload) as { risk_label?: string; recommended_action?: string };
+    const pass =
+      gold.risk_label === adj.final_label && gold.recommended_action === adj.recommended_action;
     await db.qualityEvent.create({
       data: {
         unitId,
         jobId,
         kind: pass ? "honeypot_pass" : "honeypot_fail",
         detail: JSON.stringify({
-          gold: { chapter: gold.chapter, difficulty: gold.difficulty },
-          predicted: { chapter: mergedChapter, difficulty: mergedDifficulty },
+          gold,
+          predicted: { risk_label: adj.final_label, recommended_action: adj.recommended_action },
         }),
       },
     });
     bus.publish(jobId, "honeypot", { unitId, pass });
   }
 
-  // ---- Retry or finalize ----
-  if (!critic.passed && attempt < MAX_ATTEMPTS) {
-    bus.publish(jobId, "unit:retry", { unitId, attempt, critique: critic.failures });
-    // inject critique into the stem for the next attempt
-    const cleanStem = input.stem.replace(/<critique>[\s\S]*?<\/critique>\s*/, "").trim();
-    const retryStem = `${cleanStem}\n\n<critique>${critic.failures.join("; ")}</critique>`;
+  if (!adj.passed && attempt < MAX_ATTEMPTS) {
+    bus.publish(jobId, "unit:retry", { unitId, attempt, critique: adj.failures });
+    const clean = unit.rawText.replace(/<critique>[\s\S]*?<\/critique>\s*/, "").trim();
+    const retryStem = `${clean}\n\n<critique>${adj.failures.join("; ")}</critique>`;
     await db.unit.update({
       where: { id: unitId },
       data: { stem: retryStem, status: "pending" },
     });
     await db.qualityEvent.create({
-      data: { unitId, jobId, kind: "retry", detail: JSON.stringify({ attempt, critique: critic.failures }) },
+      data: { unitId, jobId, kind: "retry", detail: JSON.stringify({ attempt, critique: adj.failures }) },
     });
-    // recurse for the retry attempt
     await processUnit(jobId, unitId);
     return;
   }
 
-  // ---- Write final ----
+  const evidence = [
+    ...(txnOut?.evidence ?? []),
+    ...(behOut?.evidence ?? []),
+    ...(devOut?.evidence ?? []),
+    ...(merOut?.evidence ?? []),
+  ];
+
   const annotation: UnitAnnotation = {
     unit_id: unitId,
-    stem: input.stem.replace(/<critique>[\s\S]*?<\/critique>\s*/, "").trim(),
-    options: input.options,
-    subject: "physics",
-    chapter: mergedChapter,
-    concepts,
-    difficulty: mergedDifficulty,
-    bloom: mergedDiff?.bloom ?? "understand",
-    difficulty_rationale: mergedDiff?.difficulty_rationale ?? "",
-    latex: mathOut?.latex ?? [],
-    has_equation: mathOut?.has_equation ?? false,
-    language: languageOut?.language ?? "en",
-    code_mix_ratio: languageOut?.code_mix_ratio ?? 0,
+    event,
+    derived,
+    risk_label: adj.final_label,
+    fraud_probability: mergedReason?.fraud_probability ?? 0.5,
+    risk_factors: mergedReason?.risk_factors ?? ["none_material"],
+    behavioral_pattern: specialists.behavioral_pattern,
+    transaction_anomaly: mergedReason?.transaction_anomaly ?? false,
+    chargeback_risk: mergedReason?.chargeback_risk ?? "LOW",
+    recommended_action: adj.recommended_action,
+    evidence,
+    explanation: mergedReason?.explanation ?? adj.disagreement_reason ?? "Adjudicated from specialist signals.",
+    final_label: adj.final_label,
+    final_score: confidence,
     confidence,
     agreement,
+    consensus: adj.consensus,
+    disagreement_reason: adj.disagreement_reason,
     route,
+    transaction_risk: specialists.transaction_risk,
+    behavior_anomaly: specialists.behavior_anomaly,
+    device_risk: specialists.device_risk,
+    merchant_context_risk: specialists.merchant_context_risk,
   };
 
   await db.final.upsert({
@@ -337,17 +403,23 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     },
   });
   await db.unit.update({ where: { id: unitId }, data: { status: "labeled" } });
-
-  bus.publish(jobId, "unit:route", { unitId, seq: unit.seq, route, confidence, agreement, criticPassed: critic.passed });
+  bus.publish(jobId, "unit:route", {
+    unitId,
+    seq: unit.seq,
+    route,
+    confidence,
+    agreement,
+    criticPassed: adj.passed,
+    consensus: adj.consensus,
+    risk_label: adj.final_label,
+  });
 }
 
-/** Run the whole pipeline for a job with a bounded concurrency semaphore. */
 export async function runPipeline(jobId: string): Promise<void> {
   try {
     await db.job.update({ where: { id: jobId }, data: { status: "labeling" } });
     bus.publish(jobId, "job:status", { status: "labeling" });
 
-    // reset any units stuck mid-flight from a previous crashed run back to pending
     await db.unit.updateMany({
       where: { jobId, status: "labeling" },
       data: { status: "pending" },
@@ -358,27 +430,32 @@ export async function runPipeline(jobId: string): Promise<void> {
       orderBy: { seq: "asc" },
       include: { final: true },
     });
-    // only process units without a final yet (idempotent re-runs)
     const todo = units.filter((u) => !u.final);
-    bus.publish(jobId, "job:status", { status: "labeling", total: todo.length, done: units.length - todo.length });
+    bus.publish(jobId, "job:status", {
+      status: "labeling",
+      total: todo.length,
+      done: units.length - todo.length,
+    });
 
     let done = units.length - todo.length;
     const queue = [...todo];
 
     async function worker() {
       while (queue.length) {
-        const unit = queue.shift();
-        if (!unit) break;
+        const u = queue.shift();
+        if (!u) break;
         try {
-          await processUnit(jobId, unit.id);
+          await processUnit(jobId, u.id);
         } catch (err) {
-          await db.unit.update({
-            where: { id: unit.id },
-            data: { status: "failed" },
-          }).catch(() => {});
+          await db.unit
+            .update({
+              where: { id: u.id },
+              data: { status: "failed" },
+            })
+            .catch(() => {});
           bus.publish(jobId, "unit:error", {
-            unitId: unit.id,
-            seq: unit.seq,
+            unitId: u.id,
+            seq: u.seq,
             error: err instanceof Error ? err.message : String(err),
           });
         }
@@ -387,16 +464,13 @@ export async function runPipeline(jobId: string): Promise<void> {
       }
     }
 
-    // simple semaphore: spawn CONCURRENCY workers
     const workers: Promise<void>[] = [];
     for (let i = 0; i < Math.min(CONCURRENCY, todo.length); i++) workers.push(worker());
     await Promise.all(workers);
 
-    // tally
     const finals = await db.final.findMany({ where: { jobId } });
     const auto = finals.filter((f) => f.route === "auto").length;
     const human = finals.filter((f) => f.route === "human").length;
-    // done when nothing left for humans; otherwise wait in review queue
     const status = human === 0 ? "done" : "review";
     await db.job.update({
       where: { id: jobId },

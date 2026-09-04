@@ -97,7 +97,7 @@ export function InsightsView() {
 
   // trend data for charts
   const trendData = trends.map((t) => ({
-    name: t.filename.replace(/\.pdf$/i, "").replace(/JEE_/i, "").replace(/_/g, " ").slice(0, 15),
+    name: t.filename.replace(/\.json$/i, "").replace(/_/g, " ").slice(0, 15),
     autoRate: Math.round(t.autoRate * 100),
     avgConf: Number(t.avgConfidence.toFixed(2)),
     kappa: Number(t.kappa.toFixed(3)),
@@ -105,16 +105,16 @@ export function InsightsView() {
   }));
 
   const cumulativeData = trends.map((t) => ({
-    name: t.filename.replace(/\.pdf$/i, "").replace(/JEE_/i, "").replace(/_/g, " ").slice(0, 15),
+    name: t.filename.replace(/\.json$/i, "").replace(/_/g, " ").slice(0, 15),
     units: t.cumulativeUnits,
     auto: t.cumulativeAuto,
     human: t.cumulativeHuman,
     hours: Number(t.cumulativeHours.toFixed(1)),
   }));
 
-  const diffData = Object.entries(distributions.difficulty).map(([name, value]) => ({ name, value }));
-  const bloomData = Object.entries(distributions.bloom).map(([name, value]) => ({ name, value }));
-  const langData = Object.entries(distributions.language).map(([name, value]) => ({ name, value }));
+  const riskData = Object.entries(distributions.risk_label ?? {}).map(([name, value]) => ({ name, value }));
+  const actionData = Object.entries(distributions.recommended_action ?? {}).map(([name, value]) => ({ name, value }));
+  const consensusData = Object.entries(distributions.consensus ?? {}).map(([name, value]) => ({ name, value }));
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -146,7 +146,7 @@ export function InsightsView() {
         <KpiCard
           label="Hours saved"
           value={summary.totalHoursSaved.toFixed(1)}
-          sub="vs 4 min/question manual"
+          sub="vs 4 min/event manual"
           icon={Clock}
           tone="amber"
         />
@@ -247,15 +247,15 @@ export function InsightsView() {
       <div className="grid lg:grid-cols-3 gap-5">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Difficulty mix</CardTitle>
+            <CardTitle className="text-base">Risk label mix</CardTitle>
             <CardDescription>Across all jobs</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={diffData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
-                    {diffData.map((_, i) => <Cell key={i} fill={DIFF_COLORS[i]} />)}
+                  <Pie data={riskData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
+                    {riskData.map((_, i) => <Cell key={i} fill={DIFF_COLORS[i % DIFF_COLORS.length]} />)}
                   </Pie>
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>
@@ -266,19 +266,19 @@ export function InsightsView() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Bloom levels</CardTitle>
-            <CardDescription>Cognitive complexity</CardDescription>
+            <CardTitle className="text-base">Recommended actions</CardTitle>
+            <CardDescription>ALLOW / REVIEW / HOLD / REJECT</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={bloomData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                <BarChart data={actionData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
                   <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
                   <YAxis allowDecimals={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {bloomData.map((_, i) => <Cell key={i} fill={BLOOM_COLORS[i % BLOOM_COLORS.length]} />)}
+                    {actionData.map((_, i) => <Cell key={i} fill={BLOOM_COLORS[i % BLOOM_COLORS.length]} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -288,15 +288,15 @@ export function InsightsView() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Languages</CardTitle>
-            <CardDescription>en / hi / hinglish</CardDescription>
+            <CardTitle className="text-base">Consensus</CardTitle>
+            <CardDescription>AGREED / DISPUTED</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={langData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
-                    {langData.map((_, i) => <Cell key={i} fill={LANG_COLORS[i]} />)}
+                  <Pie data={consensusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
+                    {consensusData.map((_, i) => <Cell key={i} fill={LANG_COLORS[i % LANG_COLORS.length]} />)}
                   </Pie>
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>

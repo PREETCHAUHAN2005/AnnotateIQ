@@ -1,77 +1,78 @@
 import { db } from "@/lib/db";
-import { buildHoneypotPool, SAMPLE_PAPERS } from "@/lib/data/sample-papers";
-
-// Regex segmenter on question numbering: ^\s*(\d{1,3})[.)]\s
-const Q_RE = /(?:^|\n)\s*(\d{1,3})\s*[.)]\s+([^\n]+(?:\n(?!\s*\d{1,3}\s*[.)]\s)[^\n]*)*)/g;
+import { buildHoneypotPool, SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
+import { toCanonicalEvent } from "@/lib/normalize";
+import type { CanonicalPaymentEvent, GoldRisk } from "@/lib/schemas";
 
 export type Segment = { seq: number; page: number; stem: string };
 
-/** Segment raw text into questions on the rigid exam-paper numbering pattern. */
+export function parseEventList(input: unknown): CanonicalPaymentEvent[] {
+  let raw = input;
+  if (typeof input === "string") {
+    const text = input.trim();
+    if (!text) return [];
+    raw = JSON.parse(text);
+  }
+  const arr = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
+  return arr.map((row, i) => {
+    const event = toCanonicalEvent(row);
+    if (!event.transaction_id) event.transaction_id = `TX_PASTE_${i + 1}`;
+    return event;
+  });
+}
+
 export function segmentText(text: string): Segment[] {
-  const out: Segment[] = [];
-  let m: RegExpExecArray | null;
-  Q_RE.lastIndex = 0;
-  while ((m = Q_RE.exec(text)) !== null) {
-    const seq = parseInt(m[1], 10);
-    const stem = m[2].trim();
-    if (stem.length > 4) out.push({ seq, page: 1, stem });
+  try {
+    return parseEventList(text).map((event, i) => ({
+      seq: i + 1,
+      page: 1,
+      stem: JSON.stringify(event),
+    }));
+  } catch {
+    return [];
   }
-  // de-dup by seq, keep order
-  const seen = new Set<number>();
-  return out.filter((s) => (seen.has(s.seq) ? false : (seen.add(s.seq), true)));
 }
 
-/** Detect multiple-choice options in a stem; return options or null. */
-function extractOptions(stem: string): string[] | null {
-  // look for trailing (a) ... (d) or A. ... D.
-  const optRe = /\([a-d]\)\s*[^()]+|\b[a-d]\.\s*[^\n]+/gi;
-  const matches = stem.match(optRe);
-  if (matches && matches.length >= 2) {
-    return matches.map((s) => s.replace(/^\(?[a-d]\)?\.?\s*/i, "").trim());
-  }
-  return null;
-}
-
-/**
- * Create a job from a sample paper id. Pre-segmented units come from the
- * curated dataset; ~15% of slots are honeypots injected at random positions.
- */
-export async function createJobFromSample(paperId: string): Promise<string> {
-  const paper = SAMPLE_PAPERS.find((p) => p.id === paperId) ?? SAMPLE_PAPERS[0];
-  const jobId = await createJobWithUnits(
-    paper.filename,
+export async function createJobFromSample(packId: string): Promise<string> {
+  const pack = SAMPLE_BATCHES.find((p) => p.id === packId) ?? SAMPLE_BATCHES[0];
+  return createJobWithUnits(
+    pack.filename,
     "sample",
-    paper.units.map((u) => ({
-      seq: u.seq,
-      page: u.page,
-      stem: u.stem,
-      options: u.options,
-      gold: u.gold,
-    }))
+    pack.units.map((u) => {
+      const { gold, ...event } = u.event;
+      return { seq: u.seq, event, gold };
+    })
   );
-  return jobId;
 }
 
-/** Create a job from pasted raw text (segmented with the regex). */
 export async function createJobFromText(filename: string, text: string): Promise<string> {
-  const segments = segmentText(text);
-  if (segments.length === 0) throw new Error("No questions found. Use numbered questions like '1. ...'");
-  const units = segments.map((s) => ({
-    seq: s.seq,
-    page: s.page,
-    stem: s.stem,
-    options: extractOptions(s.stem),
-    gold: undefined as undefined | object,
-  }));
-  return createJobWithUnits(filename, "paste", units);
+  const events = parseEventList(text);
+  if (events.length === 0) {
+    throw new Error("No payment events found. Paste a JSON array of transactions.");
+  }
+  return createJobWithUnits(
+    filename,
+    "paste",
+    events.map((event, i) => ({ seq: i + 1, event }))
+  );
+}
+
+export async function createJobFromEvents(
+  filename: string,
+  events: CanonicalPaymentEvent[],
+  source = "paste"
+): Promise<string> {
+  if (events.length === 0) throw new Error("No payment events found.");
+  return createJobWithUnits(
+    filename,
+    source,
+    events.map((event, i) => ({ seq: i + 1, event }))
+  );
 }
 
 type UnitSpec = {
   seq: number;
-  page: number;
-  stem: string;
-  options: string[] | null;
-  gold?: object;
+  event: CanonicalPaymentEvent;
+  gold?: GoldRisk;
 };
 
 async function createJobWithUnits(filename: string, source: string, specs: UnitSpec[]): Promise<string> {
@@ -79,7 +80,6 @@ async function createJobWithUnits(filename: string, source: string, specs: UnitS
     data: { filename, source, status: "extracting", unitCount: specs.length },
   });
 
-  // inject honeypots: replace ~1 in 6 unit slots with a honeypot (gold-tagged)
   const honeypots = buildHoneypotPool();
   const honeypotCount = Math.max(1, Math.floor(specs.length / 6));
   const honeypotSlots = new Set<number>();
@@ -89,27 +89,29 @@ async function createJobWithUnits(filename: string, source: string, specs: UnitS
 
   const rows = specs.map((s, i) => {
     const slot = honeypotSlots.has(i);
-    if (slot) {
+    if (slot && honeypots.length) {
       const h = honeypots[Math.floor(Math.random() * honeypots.length)];
+      const raw = JSON.stringify(h.event);
       return {
         jobId: job.id,
         seq: s.seq,
-        page: s.page,
-        rawText: h.stem,
-        stem: h.stem,
-        optionsJson: h.options ? JSON.stringify(h.options) : null,
+        page: 1,
+        rawText: raw,
+        stem: raw,
+        optionsJson: null,
         isHoneypot: true,
         goldPayload: JSON.stringify(h.goldPayload),
         status: "pending",
       };
     }
+    const raw = JSON.stringify(s.event);
     return {
       jobId: job.id,
       seq: s.seq,
-      page: s.page,
-      rawText: s.stem,
-      stem: s.stem,
-      optionsJson: s.options ? JSON.stringify(s.options) : null,
+      page: 1,
+      rawText: raw,
+      stem: raw,
+      optionsJson: null,
       isHoneypot: false,
       status: "pending",
     };

@@ -48,7 +48,7 @@ export function SearchView({
     return () => clearTimeout(t);
   }, [query]);
 
-  const suggestions = ["motion", "rotational", "easy", "hard", "hinglish", "capacitor", "pendulum", "apply"];
+  const suggestions = ["HIGH", "CRITICAL", "ALLOW", "REJECT", "geo_mismatch", "device_reuse", "velocity"];
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -57,7 +57,7 @@ export function SearchView({
           <Search className="h-6 w-6 text-primary" /> Global Search
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Search across all annotated units by stem, chapter, concept, difficulty, bloom, or LaTeX.
+          Search annotated events by transaction id, merchant, risk label, action, factors, or explanation.
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export function SearchView({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search annotated units… (e.g. friction, rotational, easy, hinglish)"
+              placeholder="Search events… (e.g. HIGH, REJECT, geo_mismatch, TX_10001)"
               className="pl-11 h-12 text-base"
             />
             {loading && (
@@ -129,8 +129,10 @@ export function SearchView({
         <Card>
           <CardContent className="py-16 text-center">
             <Search className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">Start typing to search across all units</p>
-            <p className="text-xs text-muted-foreground mt-1">Minimum 2 characters. Searches stem, chapter, concepts, difficulty, bloom, and LaTeX.</p>
+            <p className="text-muted-foreground">Start typing to search across all events</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Minimum 2 characters. Searches transaction id, merchant, risk label, action, factors, and explanation.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -208,30 +210,21 @@ function ResultCard({
             </div>
 
             <p className="text-sm text-foreground/90 line-clamp-2 mb-2">
-              {highlight(result.payload.stem.slice(0, 200))}
+              {highlight((result.payload.explanation ?? result.payload.event?.transaction_id ?? "").slice(0, 200))}
             </p>
 
             <div className="flex items-center gap-2 flex-wrap text-xs">
-              <span className="text-primary font-medium">{highlight(result.payload.chapter)}</span>
+              <span className="text-primary font-medium font-mono">{highlight(result.payload.risk_label)}</span>
               <span className="text-muted-foreground">·</span>
-              <span
-                className={cn(
-                  "capitalize",
-                  result.payload.difficulty === "easy" && "text-foreground",
-                  result.payload.difficulty === "medium" && "text-foreground/60",
-                  result.payload.difficulty === "hard" && "text-rose-400"
-                )}
-              >
-                {result.payload.difficulty}
+              <span className="font-mono">{result.payload.recommended_action}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className={cn(result.payload.consensus === "DISPUTED" ? "text-rose-400" : "text-muted-foreground")}>
+                {result.payload.consensus}
               </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground capitalize">{result.payload.bloom}</span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">{result.payload.language}</span>
-              {result.payload.concepts.length > 0 && (
+              {(result.payload.risk_factors ?? []).length > 0 && (
                 <>
                   <span className="text-muted-foreground">·</span>
-                  <span className="text-muted-foreground">{result.payload.concepts.slice(0, 2).join(", ")}</span>
+                  <span className="text-muted-foreground">{result.payload.risk_factors.slice(0, 2).join(", ")}</span>
                 </>
               )}
             </div>

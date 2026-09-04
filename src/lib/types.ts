@@ -35,28 +35,91 @@ export type FinalLite = {
   reviewerAction: string | null;
 };
 
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type RecommendedAction =
+  | "ALLOW"
+  | "REVIEW"
+  | "STEP_UP_VERIFICATION"
+  | "HOLD"
+  | "REJECT";
+export type Consensus = "AGREED" | "DISPUTED";
+
+export type EvidenceItem = {
+  feature: string;
+  observation: string;
+  impact: "low" | "medium" | "high";
+  agent?: string;
+  confidence?: number;
+};
+
+export type CanonicalPaymentEvent = {
+  transaction_id: string;
+  merchant_id?: string | null;
+  customer_id?: string | null;
+  timestamp?: string | null;
+  amount?: number | null;
+  payment_method?: string | null;
+  device_type?: string | null;
+  device_id_hash?: string | null;
+  ip_region?: string | null;
+  billing_region?: string | null;
+  shipping_region?: string | null;
+  previous_transaction_count?: number | null;
+  failed_attempts_1h?: number | null;
+  refund_count_30d?: number | null;
+  chargeback_history?: number | null;
+  account_age?: number | null;
+  order_value?: number | null;
+  product_category?: string | null;
+  payment_status?: string | null;
+};
+
+export type DerivedSignals = {
+  velocity_score: number;
+  amount_anomaly: boolean;
+  geo_mismatch: boolean;
+  device_reuse_score: number;
+  merchant_risk: number;
+  customer_behavior_score: number;
+};
+
 export type UnitAnnotation = {
   unit_id: string;
-  stem: string;
-  options: string[] | null;
-  subject: "physics";
-  chapter: string;
-  concepts: string[];
-  difficulty: "easy" | "medium" | "hard";
-  bloom: "remember" | "understand" | "apply" | "analyze";
-  difficulty_rationale: string;
-  latex: string[];
-  has_equation: boolean;
-  language: "en" | "hi" | "hinglish";
-  code_mix_ratio: number;
+  event: CanonicalPaymentEvent;
+  derived: DerivedSignals;
+  risk_label: RiskLevel;
+  fraud_probability: number;
+  risk_factors: string[];
+  behavioral_pattern: string;
+  transaction_anomaly: boolean;
+  chargeback_risk: "LOW" | "MEDIUM" | "HIGH";
+  recommended_action: RecommendedAction;
+  evidence: EvidenceItem[];
+  explanation: string;
+  final_label: RiskLevel;
+  final_score: number;
   confidence: number;
   agreement: number;
+  consensus: Consensus;
+  disagreement_reason: string | null;
   route: "auto" | "human";
+  transaction_risk?: RiskLevel;
+  behavior_anomaly?: boolean;
+  device_risk?: RiskLevel;
+  merchant_context_risk?: RiskLevel;
 };
+
+export type AgentName =
+  | "transaction_risk"
+  | "behavioral"
+  | "device_network"
+  | "merchant_order"
+  | "fraud_reasoning"
+  | "adjudicator";
 
 export type Draft = {
   id: string;
-  agent: "taxonomy" | "difficulty" | "math" | "language" | "critic";
+  agent: AgentName | string;
   sampleIdx: number;
   attempt: number;
   payload: Record<string, unknown>;
@@ -109,8 +172,8 @@ export type QualityStats = {
     actualMinutes: number;
   };
   kappa: {
-    chapter: { value: number; label: string; tone: "good" | "warn" | "bad"; n: number };
-    difficulty: { value: number; label: string; tone: "good" | "warn" | "bad"; n: number };
+    risk_label: { value: number; label: string; tone: "good" | "warn" | "bad"; n: number };
+    recommended_action: { value: number; label: string; tone: "good" | "warn" | "bad"; n: number };
   };
   honeypot: {
     perAgent: Record<string, { correct: number; total: number; accuracy: number }>;
@@ -120,14 +183,14 @@ export type QualityStats = {
   };
   events: Record<string, number>;
   distributions: {
-    difficulty: Record<string, number>;
-    chapter: Record<string, number>;
-    bloom: Record<string, number>;
-    language: Record<string, number>;
+    risk_label: Record<string, number>;
+    recommended_action: Record<string, number>;
+    chargeback_risk: Record<string, number>;
+    consensus: Record<string, number>;
   };
   latency: Record<string, { avg: number; min: number; max: number; count: number; p95: number }>;
   confidenceBuckets: { label: string; count: number }[];
-  avgConfByChapter: { chapter: string; avg: number; count: number }[];
+  avgConfByLabel: { label: string; avg: number; count: number }[];
 };
 
 export type PipelineEvent = {
@@ -152,8 +215,8 @@ export type JobComparison = {
   honeypotPass: number;
   honeypotFail: number;
   honeypotAccuracy: number;
-  kappaChapter: { value: number; label: string; tone: "good" | "warn" | "bad" };
-  distDifficulty: Record<string, number>;
+  kappaRisk: { value: number; label: string; tone: "good" | "warn" | "bad" };
+  distRisk: Record<string, number>;
 };
 
 export type HoneypotDiff = {
@@ -177,23 +240,22 @@ export type HoneypotResult = {
   diffs: HoneypotDiff[];
 };
 
-export type ChapterStat = {
+export type LabelStat = {
   name: string;
   count: number;
   autoCount: number;
   humanCount: number;
   avgConfidence: number;
   autoRate: number;
-  difficulties: Record<string, number>;
-  blooms: Record<string, number>;
-  topConcepts: { concept: string; count: number }[];
+  actions: Record<string, number>;
+  topFactors: { factor: string; count: number }[];
 };
 
 export type TaxonomyStats = {
-  totalChapters: number;
-  coveredChapters: number;
-  totalQuestions: number;
-  chapters: ChapterStat[];
+  totalLabels: number;
+  coveredLabels: number;
+  totalEvents: number;
+  labels: LabelStat[];
 };
 
 export type ActivityEvent = {
@@ -254,8 +316,15 @@ export type InsightsStats = {
   };
   trends: JobTrend[];
   distributions: {
-    difficulty: Record<string, number>;
-    bloom: Record<string, number>;
-    language: Record<string, number>;
+    risk_label: Record<string, number>;
+    recommended_action: Record<string, number>;
+    consensus: Record<string, number>;
   };
+};
+
+export type IeeeDatasetInfo = {
+  available: boolean;
+  path: string;
+  count: number;
+  message: string;
 };

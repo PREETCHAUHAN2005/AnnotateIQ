@@ -100,13 +100,15 @@ export function QualityView({ job }: { job: Job }) {
     );
   }
 
-  const diffData = Object.entries(stats.distributions.difficulty).map(([name, value]) => ({ name, value }));
-  const chapterData = Object.entries(stats.distributions.chapter)
+  const riskData = Object.entries(stats.distributions.risk_label ?? {}).map(([name, value]) => ({ name, value }));
+  const actionData = Object.entries(stats.distributions.recommended_action ?? {})
     .map(([name, value]) => ({ name: name.length > 22 ? name.slice(0, 20) + "…" : name, fullName: name, value }))
     .sort((a, b) => b.value - a.value);
-  const bloomData = Object.entries(stats.distributions.bloom ?? {}).map(([name, value]) => ({ name, value }));
-  const langData = Object.entries(stats.distributions.language ?? {}).map(([name, value]) => ({ name, value }));
-  const avgConfData = stats.avgConfByChapter ?? [];
+  const chargebackData = Object.entries(stats.distributions.chargeback_risk ?? {}).map(([name, value]) => ({ name, value }));
+  const consensusData = Object.entries(stats.distributions.consensus ?? {}).map(([name, value]) => ({ name, value }));
+  const avgConfData = (stats.avgConfByLabel ?? []).map((d) => ({ label: d.label, avg: d.avg, count: d.count }));
+  const hpAgents = Object.values(stats.honeypot.perAgent);
+  const hpAcc = hpAgents.length ? hpAgents.reduce((a, s) => a + s.accuracy, 0) / hpAgents.length : null;
 
   return (
     <div className="space-y-5">
@@ -127,7 +129,7 @@ export function QualityView({ job }: { job: Job }) {
         <KpiCard
           label="Auto-accept rate"
           value={`${(stats.rates.autoRate * 100).toFixed(0)}%`}
-          sub={`${stats.totals.auto} of ${stats.totals.finals} units`}
+          sub={`${stats.totals.auto} of ${stats.totals.finals} events`}
           icon={ShieldCheck}
           tone="emerald"
         />
@@ -141,9 +143,7 @@ export function QualityView({ job }: { job: Job }) {
         <KpiCard
           label="Honeypot accuracy"
           value={
-            stats.honeypot.perAgent.taxonomy
-              ? `${(stats.honeypot.perAgent.taxonomy.accuracy * 100).toFixed(0)}%`
-              : "—"
+            hpAcc != null ? `${(hpAcc * 100).toFixed(0)}%` : "—"
           }
           sub={`${stats.honeypot.pass} pass · ${stats.honeypot.fail} fail`}
           icon={CheckCircle2}
@@ -170,8 +170,8 @@ export function QualityView({ job }: { job: Job }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <KappaBar label="Chapter" kappa={stats.kappa.chapter} />
-            <KappaBar label="Difficulty" kappa={stats.kappa.difficulty} />
+            <KappaBar label="Risk label" kappa={stats.kappa.risk_label} />
+            <KappaBar label="Recommended action" kappa={stats.kappa.recommended_action} />
             <div className="text-xs text-muted-foreground pt-2 border-t border-border/60">
               <span className="font-semibold">Thresholds:</span> κ &gt; 0.8 production-grade · κ &lt; 0.6 guideline ambiguity
             </div>
@@ -217,15 +217,15 @@ export function QualityView({ job }: { job: Job }) {
       <div className="grid lg:grid-cols-2 gap-5">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Difficulty distribution</CardTitle>
-            <CardDescription>Across all finalized units</CardDescription>
+            <CardTitle className="text-base">Risk label distribution</CardTitle>
+            <CardDescription>Across all finalized events</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={diffData}
+                    data={riskData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -233,7 +233,7 @@ export function QualityView({ job }: { job: Job }) {
                     outerRadius={80}
                     label={(e) => `${e.name}: ${e.value}`}
                   >
-                    {diffData.map((_, i) => (
+                    {riskData.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
@@ -246,13 +246,13 @@ export function QualityView({ job }: { job: Job }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Chapter distribution</CardTitle>
-            <CardDescription>NCERT chapters covered</CardDescription>
+            <CardTitle className="text-base">Recommended action</CardTitle>
+            <CardDescription>ALLOW / REVIEW / STEP_UP / HOLD / REJECT</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chapterData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <BarChart data={actionData} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
                   <XAxis type="number" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
                   <YAxis type="category" dataKey="name" width={120} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
@@ -268,19 +268,18 @@ export function QualityView({ job }: { job: Job }) {
         </Card>
       </div>
 
-      {/* Bloom radar + Language donut */}
       <div className="grid lg:grid-cols-2 gap-5">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" /> Bloom&apos;s taxonomy distribution
+              <Brain className="h-4 w-4 text-primary" /> Chargeback risk
             </CardTitle>
-            <CardDescription>Cognitive complexity of annotated units</CardDescription>
+            <CardDescription>LOW / MEDIUM / HIGH across events</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={bloomData} cx="50%" cy="50%" outerRadius="75%">
+                <RadarChart data={chargebackData} cx="50%" cy="50%" outerRadius="75%">
                   <PolarGrid stroke="oklch(1 0 0 / 10%)" />
                   <PolarAngleAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
                   <PolarRadiusAxis tick={{ fill: "var(--muted-foreground)", fontSize: 9 }} angle={90} />
@@ -295,16 +294,16 @@ export function QualityView({ job }: { job: Job }) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Languages className="h-4 w-4 text-primary" /> Language distribution
+              <Languages className="h-4 w-4 text-primary" /> Consensus
             </CardTitle>
-            <CardDescription>en / hi / hinglish split</CardDescription>
+            <CardDescription>AGREED vs DISPUTED</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={langData}
+                    data={consensusData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -313,7 +312,7 @@ export function QualityView({ job }: { job: Job }) {
                     outerRadius={80}
                     label={(e) => `${e.name}: ${e.value}`}
                   >
-                    {langData.map((_, i) => (
+                    {consensusData.map((_, i) => (
                       <Cell key={i} fill={LANG_COLORS[i % LANG_COLORS.length]} />
                     ))}
                   </Pie>
@@ -326,14 +325,13 @@ export function QualityView({ job }: { job: Job }) {
         </Card>
       </div>
 
-      {/* Avg confidence by chapter */}
       {avgConfData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" /> Confidence by chapter
+              <Target className="h-4 w-4 text-primary" /> Confidence by risk label
             </CardTitle>
-            <CardDescription>Average confidence score per chapter (sorted high → low)</CardDescription>
+            <CardDescription>Average confidence score per risk label (sorted high → low)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -341,7 +339,7 @@ export function QualityView({ job }: { job: Job }) {
                 <BarChart data={avgConfData} layout="vertical" margin={{ left: 20, right: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 8%)" />
                   <XAxis type="number" domain={[0, 1]} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
-                  <YAxis type="category" dataKey="chapter" width={130} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
+                  <YAxis type="category" dataKey="label" width={130} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }}
                     cursor={{ fill: "var(--accent)" }}
@@ -528,7 +526,7 @@ function KappaBar({
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div className={cn("h-full transition-all", barColor)} style={{ width: `${pct}%` }} />
       </div>
-      <div className="text-[10px] text-muted-foreground mt-1">{kappa.n} units rated by k=3</div>
+      <div className="text-[10px] text-muted-foreground mt-1">{kappa.n} events rated by fraud reasoning k=3</div>
     </div>
   );
 }

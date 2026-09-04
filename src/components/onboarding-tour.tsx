@@ -27,13 +27,13 @@ const TOUR_STEPS = [
   {
     icon: Sparkles,
     title: "Welcome to AnnotateIQ",
-    description: "A multi-agent data annotation system for JEE Physics content. Agents label questions in parallel, a critic validates, and low-confidence units go to human review.",
+    description: "A multi-agent payment-risk annotation engine. Specialists score transaction, behavior, device, and merchant signals. Fraud reasoning and an adjudicator produce explainable labels. Synthetic/public data only.",
     color: "text-primary",
   },
   {
     icon: Play,
     title: "Live Pipeline",
-    description: "Watch 8 agents label each unit in parallel (taxonomy×3, difficulty×3, math×1, language×1) + a critic. See the confidence gate route units to auto or human review in real-time.",
+    description: "Watch four specialists run in parallel, then fraud reasoning (k=3) and an adjudicator. Disputed or low-confidence events route to human review.",
     color: "text-foreground",
   },
   {
@@ -63,7 +63,7 @@ const TOUR_STEPS = [
   {
     icon: Search,
     title: "Global Search",
-    description: "Search across all annotated units by stem, chapter, concept, difficulty, bloom, or LaTeX. Find any question instantly.",
+    description: "Search annotated events by transaction id, merchant, risk label, action, factors, or explanation.",
     color: "text-foreground/80",
   },
   {

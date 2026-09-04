@@ -27,15 +27,15 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV: { key: ViewKey; label: string; icon: React.ComponentType<{ className?: string }>; shortcut: string }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard, shortcut: "o" },
-  { key: "jobs", label: "Jobs & Upload", icon: ListChecks, shortcut: "j" },
+  { key: "jobs", label: "Jobs & ingest", icon: ListChecks, shortcut: "j" },
   { key: "pipeline", label: "Live Pipeline", icon: Play, shortcut: "p" },
-  { key: "units", label: "Annotated Units", icon: TableProperties, shortcut: "u" },
+  { key: "units", label: "Annotated Events", icon: TableProperties, shortcut: "u" },
   { key: "review", label: "Review Queue", icon: GitBranch, shortcut: "r" },
   { key: "honeypot", label: "Honeypot Inspector", icon: FlaskConical, shortcut: "h" },
   { key: "quality", label: "Quality", icon: Gauge, shortcut: "q" },
   { key: "compare", label: "Compare Jobs", icon: GitCompare, shortcut: "c" },
   { key: "insights", label: "Insights", icon: TrendingUp, shortcut: "i" },
-  { key: "taxonomy", label: "Taxonomy", icon: BookOpen, shortcut: "t" },
+  { key: "taxonomy", label: "Risk taxonomy", icon: BookOpen, shortcut: "t" },
   { key: "search", label: "Global Search", icon: Search, shortcut: "s" },
   { key: "activity", label: "Activity", icon: Activity, shortcut: "y" },
   { key: "architecture", label: "Architecture", icon: Network, shortcut: "a" },
@@ -82,7 +82,7 @@ export function AppShell({
                 Annotate<span className="text-gradient-emerald">IQ</span>
               </span>
               <span className="text-[10px] text-muted-foreground -mt-0.5 hidden sm:block">
-                Multi-agent JEE Physics annotation
+                Payment risk annotation engine
               </span>
             </div>
           </div>

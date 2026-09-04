@@ -60,7 +60,7 @@ export function HoneypotView({ job }: { job: Job }) {
           <FlaskConical className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">No honeypot units in this job.</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Honeypots are seeded automatically when a job is created from a sample paper.
+            Honeypots are seeded automatically when a job is created from a dummy pack.
           </p>
         </CardContent>
       </Card>
@@ -164,7 +164,7 @@ export function HoneypotView({ job }: { job: Job }) {
                         )}
                       />
                       <span className="text-[11px] truncate flex-1 font-medium">
-                        {item.predicted?.chapter ? String(item.predicted.chapter) : "—"}
+                        {item.predicted?.risk_label ? String(item.predicted.risk_label) : "—"}
                       </span>
                       {outcome === "pass" ? (
                         <CheckCircle2 className="h-3 w-3 text-foreground shrink-0" />
@@ -223,7 +223,7 @@ export function HoneypotView({ job }: { job: Job }) {
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-3">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Question stem</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Payment event</div>
                 <div className="p-2.5 rounded-md bg-muted/40 border border-border/50 text-xs leading-relaxed max-h-28 overflow-y-auto">
                   {selected.stem}
                 </div>
@@ -238,11 +238,20 @@ export function HoneypotView({ job }: { job: Job }) {
                     <div
                       key={d.field}
                       className={cn(
-                        "grid grid-cols-[72px_1fr_1fr_20px] gap-2 items-start px-2.5 py-2 text-xs",
+                        "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 px-3 py-2.5 text-xs",
                         d.match ? "bg-background" : "bg-rose-500/[0.04]"
                       )}
                     >
-                      <div className="font-medium capitalize text-muted-foreground pt-3">{d.field}</div>
+                      <div className="col-span-2 min-w-0 font-medium capitalize text-muted-foreground leading-snug">
+                        {d.field.replaceAll("_", " ")}
+                      </div>
+                      <div className="shrink-0">
+                        {d.match ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-rose-400" />
+                        )}
+                      </div>
                       <div className="min-w-0">
                         <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Gold</div>
                         <div className="font-mono text-[11px] leading-snug break-words">{d.gold || "—"}</div>
@@ -259,13 +268,6 @@ export function HoneypotView({ job }: { job: Job }) {
                         >
                           {d.predicted || "—"}
                         </div>
-                      </div>
-                      <div className="pt-3">
-                        {d.match ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
-                        ) : (
-                          <XCircle className="h-3.5 w-3.5 text-rose-400" />
-                        )}
                       </div>
                     </div>
                   ))}

@@ -35,77 +35,85 @@ type AgentInfo = {
 
 const AGENTS: AgentInfo[] = [
   {
-    id: "taxonomy",
-    name: "TaxonomyAgent",
-    icon: Layers,
-    tone: "emerald",
-    samples: 3,
-    temperature: 0.7,
-    owns: ["chapter", "concepts"],
-    description: "Classifies the question into one of 29 NCERT chapters and extracts 1-4 key concepts.",
-    promptSnippet: `You are the TaxonomyAgent. Given one physics question, choose:
-- "chapter": exactly one chapter from the list above.
-- "concepts": 1 to 4 short concept phrases actually present in the stem.`,
-  },
-  {
-    id: "difficulty",
-    name: "DifficultyAgent",
+    id: "transaction_risk",
+    name: "TransactionRiskAgent",
     icon: Gauge,
-    tone: "teal",
-    samples: 3,
-    temperature: 0.7,
-    owns: ["difficulty", "bloom", "difficulty_rationale"],
-    description: "Assesses difficulty (easy/medium/hard), Bloom level, and grounds the rationale by quoting the stem.",
-    promptSnippet: `You are the DifficultyAgent for JEE Physics questions.
-Choose:
-- "difficulty": "easy" | "medium" | "hard"
-- "bloom": "remember" | "understand" | "apply" | "analyze"
-- "difficulty_rationale": one sentence that MUST quote a phrase copied verbatim from the stem.`,
+    tone: "emerald",
+    samples: 1,
+    temperature: 0,
+    owns: ["transaction_risk", "evidence"],
+    description: "Scores amount, time-of-day, payment method, and history. Does not judge device or merchant context.",
+    promptSnippet: `You are the Transaction Risk Analyst for payment events.
+Judge amount, time-of-day, payment method, and history only.
+- "transaction_risk": LOW | MEDIUM | HIGH | CRITICAL
+- "evidence": array of {feature, observation, impact: low|medium|high}`,
   },
   {
-    id: "math",
-    name: "MathAgent",
-    icon: Code2,
+    id: "behavioral",
+    name: "BehavioralAgent",
+    icon: Activity,
+    tone: "teal",
+    samples: 1,
+    temperature: 0,
+    owns: ["behavior_anomaly", "behavioral_pattern", "evidence"],
+    description: "Looks at velocity, account age, failed attempts, and refunds. Does not score the device graph.",
+    promptSnippet: `You are the Behavioral Analyst for payment events.
+Look at velocity, account age, failed attempts, refunds.
+- "behavior_anomaly": boolean
+- "behavioral_pattern": NONE | VELOCITY_ANOMALY | NEW_ACCOUNT_BURST | REPEAT_FAILURE | DORMANT_WAKE`,
+  },
+  {
+    id: "device_network",
+    name: "DeviceNetworkAgent",
+    icon: Cpu,
     tone: "violet",
     samples: 1,
     temperature: 0,
-    owns: ["latex", "has_equation"],
-    description: "Extracts all mathematical expressions as LaTeX and flags whether the question contains equations.",
-    promptSnippet: `You are the MathAgent for JEE Physics questions.
-Extract every mathematical expression/formula present in the question as LaTeX strings.
-- "latex": array of LaTeX strings (empty if none).
-- "has_equation": true if the question contains any equation or formula, else false.`,
+    owns: ["device_risk", "evidence"],
+    description: "Scores device reuse and IP / billing / shipping mismatch. Does not set the final risk label.",
+    promptSnippet: `You are the Device & Network Analyst.
+Look at device reuse, IP/billing/shipping mismatch, unusual device type.
+- "device_risk": LOW | MEDIUM | HIGH | CRITICAL`,
   },
   {
-    id: "language",
-    name: "LanguageAgent",
-    icon: Activity,
+    id: "merchant_order",
+    name: "MerchantOrderAgent",
+    icon: Layers,
     tone: "amber",
     samples: 1,
     temperature: 0,
-    owns: ["language", "code_mix_ratio"],
-    description: "Detects language (en/hi/hinglish) and computes the code-mix ratio of non-English tokens.",
-    promptSnippet: `You are the LanguageAgent for JEE Physics questions.
-Classify the language of the question:
-- "language": "en" | "hi" | "hinglish"
-- "code_mix_ratio": float 0.0 to 1.0 — fraction of non-English tokens.`,
+    owns: ["merchant_context_risk", "evidence"],
+    description: "Scores product category, order vs amount, refunds, and chargeback history.",
+    promptSnippet: `You are the Merchant / Order Context Analyst.
+Look at product category, order value vs amount, refunds, chargebacks.
+- "merchant_context_risk": LOW | MEDIUM | HIGH | CRITICAL`,
   },
   {
-    id: "critic",
-    name: "CriticAgent",
+    id: "fraud_reasoning",
+    name: "FraudReasoningAgent",
+    icon: Code2,
+    tone: "emerald",
+    samples: 3,
+    temperature: 0.7,
+    owns: ["risk_label", "recommended_action", "fraud_probability", "risk_factors", "explanation"],
+    description: "Combines specialist signals into a proposed label and action. Sampled k=3 so specialists can disagree.",
+    promptSnippet: `You are the Fraud Reasoning Agent. Combine specialist signals. Do not invent raw fields.
+- "risk_label": LOW | MEDIUM | HIGH | CRITICAL
+- "recommended_action": ALLOW | REVIEW | STEP_UP_VERIFICATION | HOLD | REJECT
+- "explanation": 1-3 sentences citing event features`,
+  },
+  {
+    id: "adjudicator",
+    name: "AdjudicatorAgent",
     icon: ShieldCheck,
     tone: "rose",
     samples: 1,
     temperature: 0,
-    owns: ["passed", "failures"],
-    description: "Validates the merged annotation against a 4-point rubric. Never rewrites labels — only judges.",
-    promptSnippet: `You are the Critic. Validate against EXACTLY these four checks:
-1. "chapter" is one of the valid NCERT chapters.
-2. Every string in "latex" parses as valid LaTeX.
-3. "difficulty_rationale" quotes text ACTUALLY present in the stem.
-4. No "concepts" entry is unsupported by the stem.
-
-Do NOT rewrite labels. Only judge.`,
+    owns: ["passed", "consensus", "final_label", "disagreement_reason"],
+    description: "Judges only. Marks AGREED or DISPUTED. Never invents a new transaction.",
+    promptSnippet: `You are the Adjudicator. Judge only. Never invent a new transaction.
+If specialists include both LOW and HIGH/CRITICAL, consensus MUST be DISPUTED.
+Return {"passed":true,"failures":[],"consensus":"AGREED","final_label":"HIGH",...}`,
   },
 ];
 
@@ -127,7 +135,7 @@ export function ArchitectureView() {
           <Cpu className="h-6 w-6 text-primary" /> Agent Architecture
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Five stateless agents with disjoint field ownership. Merge is a plain dict spread — never an LLM call.
+          Six stateless agents with disjoint field ownership. Specialists should disagree. The adjudicator marks AGREED or DISPUTED.
         </p>
       </div>
 
@@ -143,7 +151,7 @@ export function ArchitectureView() {
               { n: 1, text: "Agents are unit-scoped & stateless" },
               { n: 2, text: "Disjoint Zod schema is the contract" },
               { n: 3, text: "DB is the state, graph is ephemeral" },
-              { n: 4, text: "Exactly one loop: critic → retry" },
+              { n: 4, text: "Exactly one loop: adjudicator → retry" },
             ].map((r) => (
               <div key={r.n} className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/40">
                 <span className="text-xs font-bold text-primary font-mono shrink-0">{r.n}</span>
@@ -158,17 +166,17 @@ export function ArchitectureView() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pipeline data flow</CardTitle>
-          <CardDescription>One unit flows through fan-out → merge → critic → route</CardDescription>
+          <CardDescription>One event flows through specialists → fraud reasoning → adjudicator → route</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col lg:flex-row items-stretch gap-3">
             {/* Input */}
-            <FlowNode label="Unit Input" sub="1 question" tone="muted" icon={Layers} />
+            <FlowNode label="Event Input" sub="1 payment event" tone="muted" icon={Layers} />
             <FlowArrow />
             {/* Fan-out cluster */}
             <div className="flex-1">
               <div className="text-xs text-muted-foreground text-center mb-2 font-semibold uppercase tracking-wider">Fan-out (parallel)</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 {AGENTS.map((agent) => {
                   const tc = toneClasses[agent.tone];
                   const Icon = agent.icon;
@@ -310,7 +318,7 @@ export function ArchitectureView() {
                 </pre>
               </div>
               <div className="text-xs text-muted-foreground pt-2 border-t border-border/60">
-                The taxonomy is carried in the <strong>system prompt</strong> (cacheable across all units), the user turn carries only the question. This is the single biggest cost lever.
+                Closed vocabularies live in the <strong>system prompt</strong>. The user turn is the payment event plus derived signals. Synthetic or public-shaped data only.
               </div>
             </CardContent>
           </Card>

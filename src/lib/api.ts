@@ -3,6 +3,7 @@ import type {
   Draft,
   FinalRecord,
   HoneypotResult,
+  IeeeDatasetInfo,
   InsightsStats,
   Job,
   JobComparison,
@@ -50,8 +51,14 @@ async function jfetch<T>(url: string, init?: RequestInit, retries = 3): Promise<
 
 export const api = {
   listJobs: () => jfetch<{ jobs: Job[] }>("/api/jobs"),
-  createJob: (body: { mode: "sample" | "paste"; paperId?: string; text?: string; filename?: string }) =>
-    jfetch<{ job: Job }>("/api/jobs", { method: "POST", body: JSON.stringify(body) }),
+  createJob: (body: {
+    mode: "sample" | "paste" | "ieee";
+    paperId?: string;
+    packId?: string;
+    text?: string;
+    filename?: string;
+  }) => jfetch<{ job: Job }>("/api/jobs", { method: "POST", body: JSON.stringify(body) }),
+  getIeeeDataset: () => jfetch<IeeeDatasetInfo>("/api/datasets/ieee"),
   getJob: (id: string) => jfetch<{ job: Job }>(`/api/jobs/${id}`),
   getUnits: (id: string) => jfetch<{ units: (Unit & { final?: { route: string; confidence: number; agreement: number; reviewerAction: string | null } | null })[] }>(`/api/jobs/${id}/units`),
   runPipeline: (id: string) => jfetch<{ ok: boolean; job?: Job }>(`/api/jobs/${id}/run`, { method: "POST" }),

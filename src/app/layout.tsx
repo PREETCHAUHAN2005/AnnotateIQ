@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AnnotateIQ — Multi-agent JEE Physics Annotation",
+  title: "AnnotateIQ — Payment Risk Annotation Engine",
   description:
-    "Multi-agent data annotation pipeline for Indian competitive-exam content. Agents label in parallel, a critic validates, low-confidence units go to human review.",
+    "Multi-agent pipeline that turns synthetic payment events into explainable, adjudicated risk labels. Public/synthetic data only — not Razorpay production data.",
 };
 
 /** Runs before paint — prevents light/dark flash without a React <script> child. */

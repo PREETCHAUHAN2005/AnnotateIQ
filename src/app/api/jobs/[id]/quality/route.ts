@@ -5,107 +5,89 @@ import { fleissKappa, honeypotAccuracy, kappaVerdict } from "@/lib/scoring";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/jobs/[id]/quality — corpus-level quality stats for the dashboard.
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-
   const job = await db.job.findUnique({ where: { id } });
   if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const finals = await db.final.findMany({ where: { jobId: id }, include: { unit: true } });
   const units = await db.unit.findMany({ where: { jobId: id }, orderBy: { seq: "asc" } });
-  const drafts = await db.draft.findMany({
-    where: { unitId: { in: units.map((u) => u.id) } },
-  });
+  const drafts = await db.draft.findMany({ where: { unitId: { in: units.map((u) => u.id) } } });
   const events = await db.qualityEvent.findMany({ where: { jobId: id } });
 
-  // ---- Auto-accept rate ----
   const autoCount = finals.filter((f) => f.route === "auto").length;
   const humanCount = finals.filter((f) => f.route === "human").length;
   const autoRate = finals.length ? autoCount / finals.length : 0;
 
-  // ---- Honeypot accuracy (per-agent on chapter & difficulty, gold vs predicted) ----
   const honeypotUnits = units.filter((u) => u.isHoneypot);
   const comparisons: { agent: string; field: string; predicted: string; gold: string }[] = [];
   for (const u of honeypotUnits) {
     if (!u.goldPayload) continue;
-    const gold = JSON.parse(u.goldPayload) as { chapter: string; difficulty: string };
-    // taxonomy drafts -> chapter; difficulty drafts -> difficulty
-    const taxDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "taxonomy" && d.attempt === 1);
-    const diffDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "difficulty" && d.attempt === 1);
-    for (const d of taxDrafts) {
-      const p = JSON.parse(d.payload) as { chapter?: string };
-      if (p.chapter) comparisons.push({ agent: "taxonomy", field: "chapter", predicted: p.chapter, gold: gold.chapter });
-    }
-    for (const d of diffDrafts) {
-      const p = JSON.parse(d.payload) as { difficulty?: string };
-      if (p.difficulty) comparisons.push({ agent: "difficulty", field: "difficulty", predicted: p.difficulty, gold: gold.difficulty });
+    const gold = JSON.parse(u.goldPayload) as { risk_label?: string; recommended_action?: string };
+    const reasonDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
+    for (const d of reasonDrafts) {
+      const p = JSON.parse(d.payload) as { risk_label?: string; recommended_action?: string };
+      if (p.risk_label && gold.risk_label)
+        comparisons.push({ agent: "fraud_reasoning", field: "risk_label", predicted: p.risk_label, gold: gold.risk_label });
+      if (p.recommended_action && gold.recommended_action)
+        comparisons.push({
+          agent: "fraud_reasoning",
+          field: "recommended_action",
+          predicted: p.recommended_action,
+          gold: gold.recommended_action,
+        });
     }
   }
   const { perAgent } = honeypotAccuracy(comparisons);
 
-  // ---- Fleiss' kappa per critical field (corpus stat, across all units, attempt 1) ----
-  const chapterRatings: string[][] = [];
-  const difficultyRatings: string[][] = [];
+  const labelRatings: string[][] = [];
+  const actionRatings: string[][] = [];
   for (const u of units) {
-    const tax = drafts.filter((d) => d.unitId === u.id && d.agent === "taxonomy" && d.attempt === 1);
-    const diff = drafts.filter((d) => d.unitId === u.id && d.agent === "difficulty" && d.attempt === 1);
-    if (tax.length >= 2) chapterRatings.push(tax.map((d) => (JSON.parse(d.payload) as { chapter: string }).chapter));
-    if (diff.length >= 2) difficultyRatings.push(diff.map((d) => (JSON.parse(d.payload) as { difficulty: string }).difficulty));
+    const rows = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
+    if (rows.length >= 2) {
+      labelRatings.push(rows.map((d) => (JSON.parse(d.payload) as { risk_label: string }).risk_label));
+      actionRatings.push(rows.map((d) => (JSON.parse(d.payload) as { recommended_action: string }).recommended_action));
+    }
   }
-  const kappaChapter = fleissKappa(chapterRatings);
-  const kappaDifficulty = fleissKappa(difficultyRatings);
+  const kappaLabel = fleissKappa(labelRatings);
+  const kappaAction = fleissKappa(actionRatings);
 
-  // ---- Hours saved vs 4 min/question manual baseline ----
   const reviewed = finals.filter((f) => f.route === "auto" || f.reviewerAction === "accept" || f.reviewerAction === "edit").length;
-  // assume reviewer spends ~1 min on each human-routed unit, 0 min on auto; baseline 4 min each
   const manualMin = finals.length * 4;
   const actualMin = autoCount * 0 + humanCount * 1;
   const hoursSaved = Math.max(0, (manualMin - actualMin) / 60);
 
-  // ---- Event tally ----
   const eventTally: Record<string, number> = {};
   for (const e of events) eventTally[e.kind] = (eventTally[e.kind] ?? 0) + 1;
 
-  // ---- Difficulty distribution (for chart) ----
-  const distDifficulty: Record<string, number> = { easy: 0, medium: 0, hard: 0 };
-  for (const f of finals) {
-    const p = JSON.parse(f.payload) as { difficulty: string };
-    distDifficulty[p.difficulty] = (distDifficulty[p.difficulty] ?? 0) + 1;
-  }
+  const distRisk: Record<string, number> = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+  const distAction: Record<string, number> = {
+    ALLOW: 0,
+    REVIEW: 0,
+    STEP_UP_VERIFICATION: 0,
+    HOLD: 0,
+    REJECT: 0,
+  };
+  const distCb: Record<string, number> = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+  const distCons: Record<string, number> = { AGREED: 0, DISPUTED: 0 };
 
-  // ---- Chapter distribution (for chart) ----
-  const distChapter: Record<string, number> = {};
+  const confByLabel: Record<string, { sum: number; count: number }> = {};
   for (const f of finals) {
-    const p = JSON.parse(f.payload) as { chapter: string };
-    distChapter[p.chapter] = (distChapter[p.chapter] ?? 0) + 1;
+    const p = JSON.parse(f.payload) as {
+      risk_label?: string;
+      recommended_action?: string;
+      chargeback_risk?: string;
+      consensus?: string;
+    };
+    distRisk[p.risk_label ?? "LOW"] = (distRisk[p.risk_label ?? "LOW"] ?? 0) + 1;
+    distAction[p.recommended_action ?? "REVIEW"] = (distAction[p.recommended_action ?? "REVIEW"] ?? 0) + 1;
+    distCb[p.chargeback_risk ?? "LOW"] = (distCb[p.chargeback_risk ?? "LOW"] ?? 0) + 1;
+    distCons[p.consensus ?? "AGREED"] = (distCons[p.consensus ?? "AGREED"] ?? 0) + 1;
+    const lab = p.risk_label ?? "LOW";
+    confByLabel[lab] ??= { sum: 0, count: 0 };
+    confByLabel[lab].sum += f.confidence;
+    confByLabel[lab].count++;
   }
-
-  // ---- Bloom distribution ----
-  const distBloom: Record<string, number> = { remember: 0, understand: 0, apply: 0, analyze: 0 };
-  for (const f of finals) {
-    const p = JSON.parse(f.payload) as { bloom: string };
-    distBloom[p.bloom] = (distBloom[p.bloom] ?? 0) + 1;
-  }
-
-  // ---- Language distribution ----
-  const distLanguage: Record<string, number> = { en: 0, hi: 0, hinglish: 0 };
-  for (const f of finals) {
-    const p = JSON.parse(f.payload) as { language: string };
-    distLanguage[p.language] = (distLanguage[p.language] ?? 0) + 1;
-  }
-
-  // ---- Avg confidence by chapter ----
-  const confByChapter: Record<string, { sum: number; count: number }> = {};
-  for (const f of finals) {
-    const p = JSON.parse(f.payload) as { chapter: string };
-    confByChapter[p.chapter] ??= { sum: 0, count: 0 };
-    confByChapter[p.chapter].sum += f.confidence;
-    confByChapter[p.chapter].count++;
-  }
-  const avgConfByChapter = Object.entries(confByChapter)
-    .map(([chapter, v]) => ({ chapter: chapter.length > 22 ? chapter.slice(0, 20) + "…" : chapter, avg: v.sum / v.count, count: v.count }))
-    .sort((a, b) => b.avg - a.avg);
 
   return NextResponse.json({
     job: { id: job.id, filename: job.filename, status: job.status, unitCount: job.unitCount },
@@ -117,15 +99,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       reviewed,
       honeypots: honeypotUnits.length,
     },
-    rates: {
-      autoRate,
-      hoursSaved,
-      manualMinutes: manualMin,
-      actualMinutes: actualMin,
-    },
+    rates: { autoRate, hoursSaved, manualMinutes: manualMin, actualMinutes: actualMin },
     kappa: {
-      chapter: { value: kappaChapter, ...kappaVerdict(kappaChapter), n: chapterRatings.length },
-      difficulty: { value: kappaDifficulty, ...kappaVerdict(kappaDifficulty), n: difficultyRatings.length },
+      risk_label: { value: kappaLabel, ...kappaVerdict(kappaLabel), n: labelRatings.length },
+      recommended_action: { value: kappaAction, ...kappaVerdict(kappaAction), n: actionRatings.length },
     },
     honeypot: {
       perAgent,
@@ -135,22 +112,28 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     },
     events: eventTally,
     distributions: {
-      difficulty: distDifficulty,
-      chapter: distChapter,
-      bloom: distBloom,
-      language: distLanguage,
+      risk_label: distRisk,
+      recommended_action: distAction,
+      chargeback_risk: distCb,
+      consensus: distCons,
     },
-    // per-agent latency stats (attempt 1 only)
     latency: computeLatency(drafts),
-    // confidence distribution buckets
     confidenceBuckets: computeConfidenceBuckets(finals),
-    // avg confidence by chapter (sorted desc)
-    avgConfByChapter,
+    avgConfByLabel: Object.entries(confByLabel)
+      .map(([label, v]) => ({ label, avg: v.sum / v.count, count: v.count }))
+      .sort((a, b) => b.avg - a.avg),
   });
 }
 
 function computeLatency(drafts: { agent: string; latencyMs: number | null; attempt: number }[]) {
-  const agents = ["taxonomy", "difficulty", "math", "language", "critic"];
+  const agents = [
+    "transaction_risk",
+    "behavioral",
+    "device_network",
+    "merchant_order",
+    "fraud_reasoning",
+    "adjudicator",
+  ];
   const out: Record<string, { avg: number; min: number; max: number; count: number; p95: number }> = {};
   for (const agent of agents) {
     const lats = drafts

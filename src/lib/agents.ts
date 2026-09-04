@@ -1,171 +1,183 @@
-import { chat, structuredComplete } from "@/lib/llm";
+import { structuredComplete } from "@/lib/llm";
 import {
-  CHAPTERS,
-  parseCritic,
-  parseDifficulty,
-  parseLanguage,
-  parseMath,
-  parseTaxonomy,
-  type CriticOut,
-  type DifficultyOut,
-  type LanguageOut,
-  type MathOut,
-  type TaxonomyOut,
+  parseAdjudicator,
+  parseBehavioral,
+  parseDeviceNetwork,
+  parseFraudReasoning,
+  parseMerchantOrder,
+  parseTransactionRisk,
+  RISK_FACTORS,
+  type AdjudicatorOut,
+  type BehavioralOut,
+  type CanonicalPaymentEvent,
+  type DerivedSignals,
+  type DeviceNetworkOut,
+  type FraudReasoningOut,
+  type MerchantOrderOut,
+  type RiskLevel,
+  type TransactionRiskOut,
 } from "@/lib/schemas";
+import {
+  heuristicAdjudicator,
+  heuristicBehavioral,
+  heuristicDeviceNetwork,
+  heuristicFraudReasoning,
+  heuristicMerchantOrder,
+  heuristicTransactionRisk,
+} from "@/lib/heuristics";
 
 export type UnitInput = {
   unitId: string;
-  stem: string;
-  options: string[] | null;
+  event: CanonicalPaymentEvent;
+  derived: DerivedSignals;
 };
 
-// ---- System prompts carry the taxonomy (prompt-cacheable across units) ----
+function eventBlock(event: CanonicalPaymentEvent, derived: DerivedSignals): string {
+  return `Payment event (synthetic or public-shaped; not Razorpay production data):
+${JSON.stringify(event, null, 2)}
 
-const TAXONOMY_BLOCK = `You annotate JEE (Indian engineering entrance) PHYSICS questions only.
-The chapter MUST be one of these ${CHAPTERS.length} NCERT chapters (use the exact string):
-${CHAPTERS.map((c) => `- ${c}`).join("\n")}
-Return STRICT JSON only, no prose, no markdown fences.`;
+Derived signals (deterministic, not a judgment):
+${JSON.stringify(derived, null, 2)}
 
-// ============================ TaxonomyAgent ============================
-// k=3 samples, temperature 0.7
-
-export async function runTaxonomy(
-  unit: UnitInput
-): Promise<{ value: TaxonomyOut | null; raw: string; latencyMs: number }> {
-  const sys = `${TAXONOMY_BLOCK}
-
-You are the TaxonomyAgent. Given one physics question, choose:
-- "chapter": exactly one chapter from the list above.
-- "concepts": 1 to 4 short concept phrases actually present in the stem (lowercase, no chapter name).
-
-Return JSON: {"chapter": "...", "concepts": ["...", "..."]}`;
-
-  const user = `Question:\n${unit.stem}${
-    unit.options ? `\nOptions: ${unit.options.join(", ")}` : ""
-  }`;
-
-  return structuredComplete(sys, user, parseTaxonomy, { temperature: 0.7 });
+Return STRICT JSON only, no markdown.`;
 }
 
-// ============================ DifficultyAgent ============================
-// k=3 samples, temperature 0.7
-
-export async function runDifficulty(
+export async function runTransactionRisk(
   unit: UnitInput
-): Promise<{ value: DifficultyOut | null; raw: string; latencyMs: number }> {
-  const sys = `You are the DifficultyAgent for JEE Physics questions.
-Choose:
-- "difficulty": "easy" | "medium" | "hard"
-- "bloom": "remember" | "understand" | "apply" | "analyze"
-- "difficulty_rationale": one sentence that MUST quote a phrase copied verbatim from the question stem to ground the judgement.
+): Promise<{ value: TransactionRiskOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Transaction Risk Analyst for payment events.
+Judge amount, time-of-day, payment method, and history only.
+- "transaction_risk": LOW | MEDIUM | HIGH | CRITICAL
+- "evidence": array of {feature, observation, impact: low|medium|high}
 
-Return STRICT JSON only: {"difficulty": "...", "bloom": "...", "difficulty_rationale": "..."}`;
-
-  const user = `Question:\n${unit.stem}${
-    unit.options ? `\nOptions: ${unit.options.join(", ")}` : ""
-  }`;
-
-  return structuredComplete(sys, user, parseDifficulty, { temperature: 0.7 });
+Return JSON: {"transaction_risk":"MEDIUM","evidence":[{"feature":"amount","observation":"24500","impact":"high"}]}`;
+  return structuredComplete(sys, eventBlock(unit.event, unit.derived), parseTransactionRisk, {
+    temperature: 0,
+  });
 }
 
-// ============================ MathAgent ============================
-// single sample, temperature 0
-
-export async function runMath(
+export async function runBehavioral(
   unit: UnitInput
-): Promise<{ value: MathOut | null; raw: string; latencyMs: number }> {
-  const sys = `You are the MathAgent for JEE Physics questions.
-Extract every mathematical expression/formula present in the question as LaTeX strings.
-- "latex": array of LaTeX strings (empty if none). Use standard LaTeX, e.g. "E = mc^2".
-- "has_equation": true if the question contains any equation or formula, else false.
+): Promise<{ value: BehavioralOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Behavioral Analyst for payment events.
+Look at velocity, account age, failed attempts, refunds.
+- "behavior_anomaly": boolean
+- "behavioral_pattern": NONE | VELOCITY_ANOMALY | NEW_ACCOUNT_BURST | REPEAT_FAILURE | DORMANT_WAKE
+- "evidence": {feature, observation, impact}[]
 
-Return STRICT JSON only: {"latex": ["..."], "has_equation": true}`;
-
-  const user = `Question:\n${unit.stem}${
-    unit.options ? `\nOptions: ${unit.options.join(", ")}` : ""
-  }`;
-
-  return structuredComplete(sys, user, parseMath, { temperature: 0 });
+Return STRICT JSON.`;
+  return structuredComplete(sys, eventBlock(unit.event, unit.derived), parseBehavioral, {
+    temperature: 0,
+  });
 }
 
-// ============================ LanguageAgent ============================
-// single sample, temperature 0
-
-export async function runLanguage(
+export async function runDeviceNetwork(
   unit: UnitInput
-): Promise<{ value: LanguageOut | null; raw: string; latencyMs: number }> {
-  const sys = `You are the LanguageAgent for JEE Physics questions.
-Classify the language of the question:
-- "language": "en" (pure English) | "hi" (pure Hindi/Devanagari) | "hinglish" (mix of Hindi + English in Latin script)
-- "code_mix_ratio": float 0.0 to 1.0 — fraction of non-English (Hindi/Hinglish) tokens. 0.0 = pure English, 1.0 = pure Hindi.
+): Promise<{ value: DeviceNetworkOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Device & Network Analyst.
+Look at device reuse, IP/billing/shipping mismatch, unusual device type.
+- "device_risk": LOW | MEDIUM | HIGH | CRITICAL
+- "evidence": {feature, observation, impact}[]
 
-Return STRICT JSON only: {"language": "en", "code_mix_ratio": 0.0}`;
-
-  const user = `Question:\n${unit.stem}${
-    unit.options ? `\nOptions: ${unit.options.join(", ")}` : ""
-  }`;
-
-  return structuredComplete(sys, user, parseLanguage, { temperature: 0 });
+Return STRICT JSON.`;
+  return structuredComplete(sys, eventBlock(unit.event, unit.derived), parseDeviceNetwork, {
+    temperature: 0,
+  });
 }
 
-// ============================ CriticAgent ============================
-// single sample, temperature 0 — rubric validation only, never rewrites labels
+export async function runMerchantOrder(
+  unit: UnitInput
+): Promise<{ value: MerchantOrderOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Merchant / Order Context Analyst.
+Look at product category, order value vs amount, refunds, chargebacks.
+- "merchant_context_risk": LOW | MEDIUM | HIGH | CRITICAL
+- "evidence": {feature, observation, impact}[]
 
-export async function runCritic(
+Return STRICT JSON.`;
+  return structuredComplete(sys, eventBlock(unit.event, unit.derived), parseMerchantOrder, {
+    temperature: 0,
+  });
+}
+
+export type SpecialistPacket = {
+  transaction_risk: RiskLevel;
+  behavior_anomaly: boolean;
+  behavioral_pattern: string;
+  device_risk: RiskLevel;
+  merchant_context_risk: RiskLevel;
+};
+
+export async function runFraudReasoning(
   unit: UnitInput,
+  specialists: SpecialistPacket
+): Promise<{ value: FraudReasoningOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Fraud Reasoning Agent. Combine specialist signals. Do not invent raw fields.
+Allowed risk_factors (use only these plus "none_material"): ${RISK_FACTORS.join(", ")}.
+- "risk_label": LOW | MEDIUM | HIGH | CRITICAL
+- "recommended_action": ALLOW | REVIEW | STEP_UP_VERIFICATION | HOLD | REJECT
+- "fraud_probability": 0..1
+- "risk_factors": 1-8 strings
+- "transaction_anomaly": boolean
+- "chargeback_risk": LOW | MEDIUM | HIGH
+- "explanation": 1-3 sentences citing event features
+
+Return STRICT JSON.`;
+  const user = `${eventBlock(unit.event, unit.derived)}
+
+Specialist outputs:
+${JSON.stringify(specialists)}`;
+  return structuredComplete(sys, user, parseFraudReasoning, { temperature: 0.7 });
+}
+
+export async function runAdjudicator(
+  unit: UnitInput,
+  specialists: SpecialistPacket,
   merged: {
-    chapter: string;
-    concepts: string[];
-    latex: string[];
-    difficulty_rationale: string;
+    risk_label: RiskLevel;
+    recommended_action: string;
+    explanation: string;
+    risk_factors: string[];
   }
-): Promise<{ value: CriticOut | null; raw: string; latencyMs: number }> {
-  const sys = `You are the Critic for a JEE Physics annotation pipeline. Validate the annotation against EXACTLY these four checks:
-1. "chapter" is one of the ${CHAPTERS.length} valid NCERT chapters.
-2. Every string in "latex" parses as valid LaTeX (balanced braces, valid commands).
-3. "difficulty_rationale" quotes text that is ACTUALLY present verbatim in the question stem.
-4. No "concepts" entry is absent from or unsupported by the stem.
+): Promise<{ value: AdjudicatorOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Adjudicator. Judge only. Never invent a new transaction.
+Checks:
+1. risk_label is LOW|MEDIUM|HIGH|CRITICAL
+2. recommended_action is ALLOW|REVIEW|STEP_UP_VERIFICATION|HOLD|REJECT
+3. explanation cites at least one real feature from the event
+4. If specialists include both LOW and HIGH/CRITICAL, consensus MUST be DISPUTED
 
-Valid chapters:
-${CHAPTERS.map((c) => `- ${c}`).join("\n")}
+Return STRICT JSON:
+{"passed":true,"failures":[],"consensus":"AGREED","final_label":"HIGH","recommended_action":"STEP_UP_VERIFICATION","disagreement_reason":null}`;
+  const user = `${eventBlock(unit.event, unit.derived)}
 
-Do NOT rewrite any labels. Only judge. Return STRICT JSON:
-{"passed": true, "failures": []}
-or
-{"passed": false, "failures": ["check 3: rationale quote not found in stem", ...]}`;
-
-  const user = `Question stem:
-${unit.stem}
-${unit.options ? `\nOptions: ${unit.options.join(", ")}` : ""}
-
-Annotation to validate:
-- chapter: ${merged.chapter}
-- concepts: ${JSON.stringify(merged.concepts)}
-- latex: ${JSON.stringify(merged.latex)}
-- difficulty_rationale: ${merged.difficulty_rationale}`;
-
-  return structuredComplete(sys, user, parseCritic, { temperature: 0 });
+Specialists: ${JSON.stringify(specialists)}
+Merged proposal: ${JSON.stringify(merged)}`;
+  return structuredComplete(sys, user, parseAdjudicator, { temperature: 0 });
 }
 
-// Heuristic fallbacks — used when the LLM is rate-limited or unparseable.
-// These analyse the question text deterministically so the pipeline never
-// stalls and the demo always produces realistic, varied annotations.
-import {
-  heuristicDifficulty,
-  heuristicLanguage,
-  heuristicMath,
-  heuristicTaxonomy,
-} from "@/lib/heuristics";
-
-export function fallbackTaxonomy(stem: string, sampleIdx = 0): TaxonomyOut {
-  return heuristicTaxonomy(stem, sampleIdx);
+export function fallbackTransactionRisk(event: CanonicalPaymentEvent, derived: DerivedSignals) {
+  return heuristicTransactionRisk(event, derived);
 }
-export function fallbackDifficulty(stem: string, sampleIdx = 0): DifficultyOut {
-  return heuristicDifficulty(stem, sampleIdx);
+export function fallbackBehavioral(event: CanonicalPaymentEvent, derived: DerivedSignals) {
+  return heuristicBehavioral(event, derived);
 }
-export function fallbackMath(stem: string): MathOut {
-  return heuristicMath(stem);
+export function fallbackDeviceNetwork(event: CanonicalPaymentEvent, derived: DerivedSignals) {
+  return heuristicDeviceNetwork(event, derived);
 }
-export function fallbackLanguage(stem: string): LanguageOut {
-  return heuristicLanguage(stem);
+export function fallbackMerchantOrder(event: CanonicalPaymentEvent, derived: DerivedSignals) {
+  return heuristicMerchantOrder(event, derived);
+}
+export function fallbackFraudReasoning(
+  event: CanonicalPaymentEvent,
+  derived: DerivedSignals,
+  specialists: SpecialistPacket,
+  sampleIdx = 0
+) {
+  return heuristicFraudReasoning(event, derived, specialists, sampleIdx);
+}
+export function fallbackAdjudicator(
+  specialists: SpecialistPacket,
+  merged: { risk_label: RiskLevel; recommended_action: string; explanation: string }
+) {
+  return heuristicAdjudicator(specialists, merged);
 }

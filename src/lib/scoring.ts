@@ -1,28 +1,23 @@
-// §3 — confidence & quality maths
-
 export const K = 3;
-export const CRITICAL_FIELDS = ["chapter", "difficulty"] as const;
+export const CRITICAL_FIELDS = ["risk_label", "recommended_action"] as const;
 export const THRESHOLD = 0.85;
 export const MAX_ATTEMPTS = 2;
 export const CONCURRENCY = 2;
 
 type CriticalField = (typeof CRITICAL_FIELDS)[number];
 
-/**
- * Per-unit routing score. samples maps each critical field to its k samples.
- * agreement = min over critical fields (weakest link, NOT mean).
- * confidence = agreement * (critic_passed ? 1.0 : 0.6)
- */
 export function score(
-  samples: { chapter: string[]; difficulty: string[] },
-  criticPassed: boolean
+  samples: { risk_label: string[]; recommended_action: string[] },
+  criticPassed: boolean,
+  disputed = false
 ): { confidence: number; agreement: number } {
   const fieldConf: Record<CriticalField, number> = {
-    chapter: modalAgreement(samples.chapter),
-    difficulty: modalAgreement(samples.difficulty),
+    risk_label: modalAgreement(samples.risk_label),
+    recommended_action: modalAgreement(samples.recommended_action),
   };
-  const agreement = Math.min(fieldConf.chapter, fieldConf.difficulty);
-  const confidence = agreement * (criticPassed ? 1.0 : 0.6);
+  const agreement = Math.min(fieldConf.risk_label, fieldConf.recommended_action);
+  let confidence = agreement * (criticPassed ? 1.0 : 0.6);
+  if (disputed) confidence *= 0.7;
   return { confidence, agreement };
 }
 
@@ -34,22 +29,17 @@ function modalAgreement(vals: string[]): number {
   return max / vals.length;
 }
 
-export function routeFor(confidence: number): "auto" | "human" {
+export function routeFor(confidence: number, disputed = false): "auto" | "human" {
+  if (disputed) return "human";
   return confidence >= THRESHOLD ? "auto" : "human";
 }
 
-/**
- * Fleiss' kappa across N items rated by k raters on a categorical field.
- * vals[i] is the list of k labels for item i. Corpus statistic only — never
- * used for per-unit routing.
- */
 export function fleissKappa(vals: string[][]): number {
   const N = vals.length;
   if (N === 0) return 0;
   const k = vals[0]?.length ?? 0;
   if (k < 2) return 0;
 
-  // category totals across all items
   const categoryTotals: Record<string, number> = {};
   const itemAgreement: number[] = [];
 
@@ -61,7 +51,6 @@ export function fleissKappa(vals: string[][]): number {
       sumSq += c * c;
       categoryTotals[cat] = (categoryTotals[cat] ?? 0) + c;
     }
-    // P_i = (sumSq - k) / (k*(k-1))
     const Pi = (sumSq - k) / (k * (k - 1));
     itemAgreement.push(Pi);
   }
@@ -77,7 +66,6 @@ export function fleissKappa(vals: string[][]): number {
   return (Pbar - Pe) / (1 - Pe);
 }
 
-/** Compare an agent's draft to the honeypot gold payload for a field set. */
 export function honeypotAccuracy(
   comparisons: { agent: string; field: string; predicted: string; gold: string }[]
 ): { perAgent: Record<string, { correct: number; total: number; accuracy: number }> } {

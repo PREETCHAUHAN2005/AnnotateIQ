@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Job, ReviewItem } from "@/lib/types";
+import type { Draft, Job, ReviewItem } from "@/lib/types";
 import { api } from "@/lib/api";
+import { eventSummary, parseUnitEvent } from "@/lib/normalize";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Draft } from "@/lib/types";
 import { toast } from "sonner";
 import {
   Check,
@@ -28,14 +27,27 @@ import {
   ChevronDown,
   AlertTriangle,
   Loader2,
-  GitBranch,
   ShieldCheck,
   Bot,
   Gauge,
   CheckCircle2,
   XCircle,
+  Cpu,
+  Layers,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const RISK_LABELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+const ACTIONS = ["ALLOW", "REVIEW", "STEP_UP_VERIFICATION", "HOLD", "REJECT"] as const;
+const AGENT_ORDER = [
+  "transaction_risk",
+  "behavioral",
+  "device_network",
+  "merchant_order",
+  "fraud_reasoning",
+  "adjudicator",
+] as const;
 
 export function ReviewView({ job }: { job: Job }) {
   const [items, setItems] = useState<ReviewItem[]>([]);
@@ -65,7 +77,6 @@ export function ReviewView({ job }: { job: Job }) {
     load();
   }, [load, refreshTick]);
 
-  // load drafts for current item
   useEffect(() => {
     if (!items[idx]) return;
     setEditMode(false);
@@ -105,10 +116,10 @@ export function ReviewView({ job }: { job: Job }) {
   const batchAction = async (action: "accept" | "reject") => {
     const unreviewed = items.filter((i) => !i.reviewerAction);
     if (unreviewed.length === 0) {
-      toast.info("No unreviewed units to batch process.");
+      toast.info("No unreviewed events to batch process.");
       return;
     }
-    if (!confirm(`${action === "accept" ? "Accept" : "Reject"} all ${unreviewed.length} unreviewed units?`)) return;
+    if (!confirm(`${action === "accept" ? "Accept" : "Reject"} all ${unreviewed.length} unreviewed events?`)) return;
     setSubmitting(true);
     let ok = 0;
     let fail = 0;
@@ -121,12 +132,11 @@ export function ReviewView({ job }: { job: Job }) {
       }
     }
     setSubmitting(false);
-    if (ok > 0) toast.success(`${ok} unit${ok !== 1 ? "s" : ""} ${action}ed`);
+    if (ok > 0) toast.success(`${ok} event${ok !== 1 ? "s" : ""} ${action}ed`);
     if (fail > 0) toast.error(`${fail} failed`);
     setRefreshTick((t) => t + 1);
   };
 
-  // keyboard shortcuts: A accept, E edit-mode, R reject, J/K navigate
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -154,10 +164,12 @@ export function ReviewView({ job }: { job: Job }) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Review Queue</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Low-confidence units (conf &lt; 0.85) routed here. Keys: <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">A</kbd> accept ·{" "}
+            Low-confidence or DISPUTED events (conf &lt; 0.85) route here. Keys:{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">A</kbd> accept ·{" "}
             <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">E</kbd> edit ·{" "}
             <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">R</kbd> reject ·{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">J</kbd>/<kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">K</kbd> nav
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">J</kbd>/
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">K</kbd> nav
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -197,15 +209,12 @@ export function ReviewView({ job }: { job: Job }) {
         <Card>
           <CardContent className="py-16 text-center">
             <Check className="h-10 w-10 text-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No units routed to human review for this job.</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Run the pipeline first, or all units auto-accepted.
-            </p>
+            <p className="text-muted-foreground">No events routed to human review for this job.</p>
+            <p className="text-xs text-muted-foreground mt-1">Run the pipeline first, or all events auto-accepted.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid lg:grid-cols-[280px_1fr] gap-5">
-          {/* Queue list */}
           <Card className="h-fit">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Queue ({items.length})</CardTitle>
@@ -226,7 +235,7 @@ export function ReviewView({ job }: { job: Job }) {
                         <span className="font-mono text-xs text-muted-foreground">#{it.seq}</span>
                         {it.isHoneypot && <AlertTriangle className="h-3 w-3 text-foreground/60" />}
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs truncate">{it.payload.chapter}</div>
+                          <div className="text-xs truncate font-mono">{it.payload.risk_label}</div>
                         </div>
                         {it.reviewerAction && (
                           <Badge
@@ -245,7 +254,9 @@ export function ReviewView({ job }: { job: Job }) {
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                         <span>conf {it.confidence.toFixed(2)}</span>
                         <span>·</span>
-                        <span className={cn(it.payload.difficulty)}>{it.payload.difficulty}</span>
+                        <span className={cn(it.payload.consensus === "DISPUTED" && "text-rose-400")}>
+                          {it.payload.recommended_action}
+                        </span>
                       </div>
                     </button>
                   ))}
@@ -254,10 +265,8 @@ export function ReviewView({ job }: { job: Job }) {
             </CardContent>
           </Card>
 
-          {/* Detail pane */}
           {current && (
             <div className="space-y-4">
-              {/* Nav */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>
@@ -273,43 +282,37 @@ export function ReviewView({ job }: { job: Job }) {
                   <Button size="sm" variant="ghost" onClick={() => setIdx((i) => Math.max(i - 1, 0))} disabled={idx === 0}>
                     <ChevronUp className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setIdx((i) => Math.min(i + 1, items.length - 1))} disabled={idx === items.length - 1}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIdx((i) => Math.min(i + 1, items.length - 1))}
+                    disabled={idx === items.length - 1}
+                  >
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
               <div className="grid lg:grid-cols-2 gap-4">
-                {/* Left: question + drafts (the differentiator) */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Bot className="h-4 w-4 text-primary" /> Question & agent drafts
+                      <Bot className="h-4 w-4 text-primary" /> Event & agent drafts
                     </CardTitle>
-                    <CardDescription>See exactly where agents disagreed.</CardDescription>
+                    <CardDescription>See exactly where specialists disagreed.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Stem</Label>
-                      <div className="mt-1 p-3 rounded-lg bg-muted/40 border border-border/60 text-sm leading-relaxed">
-                        {current.stem}
+                      <Label className="text-xs text-muted-foreground">Payment event</Label>
+                      <div className="mt-1 p-3 rounded-lg bg-muted/40 border border-border/60 text-sm leading-relaxed font-mono">
+                        {eventSummary(current.payload.event ?? parseUnitEvent(current.stem, current.stem))}
                       </div>
-                      {current.options && (
-                        <div className="mt-2 space-y-1">
-                          {current.options.map((o, i) => (
-                            <div key={i} className="text-xs font-mono text-muted-foreground pl-3">
-                              ({String.fromCharCode(97 + i)}) {o}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                     <Separator />
                     <DraftsPanel drafts={drafts} />
                   </CardContent>
                 </Card>
 
-                {/* Right: editable annotation form */}
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -327,7 +330,9 @@ export function ReviewView({ job }: { job: Job }) {
                     />
                     {editMode && (
                       <div className="space-y-1">
-                        <Label htmlFor="note" className="text-xs">Review note (optional)</Label>
+                        <Label htmlFor="note" className="text-xs">
+                          Review note (optional)
+                        </Label>
                         <Textarea
                           id="note"
                           value={note}
@@ -340,19 +345,40 @@ export function ReviewView({ job }: { job: Job }) {
                     )}
                     <Separator />
                     <div className="flex flex-wrap gap-2">
-                      <Button onClick={() => submit("accept")} disabled={submitting} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                      <Button
+                        onClick={() => submit("accept")}
+                        disabled={submitting}
+                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
                         <Check className="h-4 w-4" /> Accept <kbd className="ml-1 text-[10px] opacity-70">A</kbd>
                       </Button>
                       {!editMode ? (
-                        <Button onClick={() => { setEdited(current.payload); setEditMode(true); }} disabled={submitting} variant="outline" className="gap-2">
+                        <Button
+                          onClick={() => {
+                            setEdited(current.payload);
+                            setEditMode(true);
+                          }}
+                          disabled={submitting}
+                          variant="outline"
+                          className="gap-2"
+                        >
                           <Edit3 className="h-4 w-4" /> Edit <kbd className="ml-1 text-[10px] opacity-70">E</kbd>
                         </Button>
                       ) : (
-                        <Button onClick={() => submit("edit")} disabled={submitting} className="gap-2 bg-teal-600 hover:bg-teal-700 text-foreground">
+                        <Button
+                          onClick={() => submit("edit")}
+                          disabled={submitting}
+                          className="gap-2 bg-teal-600 hover:bg-teal-700 text-foreground"
+                        >
                           <Check className="h-4 w-4" /> Save edit <kbd className="ml-1 text-[10px] opacity-70">E</kbd>
                         </Button>
                       )}
-                      <Button onClick={() => submit("reject")} disabled={submitting} variant="outline" className="gap-2 border-rose-500/40 text-rose-400 hover:bg-rose-500/10">
+                      <Button
+                        onClick={() => submit("reject")}
+                        disabled={submitting}
+                        variant="outline"
+                        className="gap-2 border-rose-500/40 text-rose-400 hover:bg-rose-500/10"
+                      >
                         <X className="h-4 w-4" /> Reject <kbd className="ml-1 text-[10px] opacity-70">R</kbd>
                       </Button>
                     </div>
@@ -378,7 +404,7 @@ function DraftsPanel({ drafts }: { drafts: Draft[] }) {
 
   return (
     <div className="space-y-3">
-      {(["taxonomy", "difficulty", "math", "language", "critic"] as const).map((agent) => {
+      {AGENT_ORDER.map((agent) => {
         const ds = byAgent[agent] ?? [];
         if (ds.length === 0) return null;
         return <DraftGroup key={agent} agent={agent} drafts={ds} />;
@@ -387,36 +413,39 @@ function DraftsPanel({ drafts }: { drafts: Draft[] }) {
   );
 }
 
+function draftKey(agent: string, p: Record<string, unknown>): string {
+  if (agent === "transaction_risk") return String(p.transaction_risk);
+  if (agent === "behavioral") return `${p.behavior_anomaly}:${p.behavioral_pattern}`;
+  if (agent === "device_network") return String(p.device_risk);
+  if (agent === "merchant_order") return String(p.merchant_context_risk);
+  if (agent === "fraud_reasoning") return `${p.risk_label}:${p.recommended_action}`;
+  if (agent === "adjudicator") return `${p.consensus}:${p.final_label}`;
+  return JSON.stringify(p);
+}
+
 function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
-  const [open, setOpen] = useState(agent === "taxonomy" || agent === "difficulty");
-  // detect disagreement for sampled agents
-  const values = drafts.map((d) => {
-    const p = d.payload as Record<string, unknown>;
-    if (agent === "taxonomy") return p.chapter as string;
-    if (agent === "difficulty") return p.difficulty as string;
-    return JSON.stringify(p);
-  });
+  const [open, setOpen] = useState(agent === "fraud_reasoning" || agent === "adjudicator");
+  const values = drafts.map((d) => draftKey(agent, d.payload as Record<string, unknown>));
   const disagree = new Set(values).size > 1;
 
   const icon = {
-    taxonomy: Bot,
-    difficulty: Gauge,
-    math: Bot,
-    language: Bot,
-    critic: ShieldCheck,
+    transaction_risk: Gauge,
+    behavioral: Activity,
+    device_network: Cpu,
+    merchant_order: Layers,
+    fraud_reasoning: Bot,
+    adjudicator: ShieldCheck,
   }[agent] ?? Bot;
-
   const Icon = icon;
 
   return (
     <div className={cn("rounded-lg border", disagree ? "border-foreground/20 bg-foreground/5" : "border-border/60")}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 p-2.5 text-left"
-      >
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-2.5 text-left">
         <Icon className={cn("h-3.5 w-3.5", disagree ? "text-foreground/60" : "text-muted-foreground")} />
-        <span className="text-xs font-semibold capitalize">{agent}</span>
-        <span className="text-[10px] text-muted-foreground">· {drafts.length} sample{drafts.length !== 1 ? "s" : ""}</span>
+        <span className="text-xs font-semibold">{agent}</span>
+        <span className="text-[10px] text-muted-foreground">
+          · {drafts.length} sample{drafts.length !== 1 ? "s" : ""}
+        </span>
         {disagree && (
           <Badge variant="outline" className="text-[9px] ml-1 border-foreground/20 text-foreground/60 gap-1">
             <AlertTriangle className="h-2.5 w-2.5" /> disagreed
@@ -430,48 +459,39 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
             const p = d.payload as Record<string, unknown>;
             return (
               <div key={d.id} className="text-xs font-mono p-2 rounded bg-muted/40 border border-border/40">
-                {agent === "taxonomy" && (
+                {agent === "transaction_risk" && (
+                  <div>
+                    sample {d.sampleIdx}: <span className="text-primary">{String(p.transaction_risk)}</span>
+                  </div>
+                )}
+                {agent === "behavioral" && (
+                  <div>
+                    anomaly {String(p.behavior_anomaly)} · {String(p.behavioral_pattern)}
+                  </div>
+                )}
+                {agent === "device_network" && <div>device_risk {String(p.device_risk)}</div>}
+                {agent === "merchant_order" && <div>merchant_context_risk {String(p.merchant_context_risk)}</div>}
+                {agent === "fraud_reasoning" && (
                   <div>
                     <span className="text-muted-foreground">sample {d.sampleIdx}:</span>{" "}
-                    <span className="text-primary">{String(p.chapter)}</span>
-                    {Array.isArray(p.concepts) && (
-                      <span className="text-muted-foreground"> · [{(p.concepts as string[]).join(", ")}]</span>
+                    <span className="text-primary">{String(p.risk_label)}</span> · {String(p.recommended_action)}
+                    {p.explanation != null && (
+                      <div className="text-muted-foreground mt-0.5 italic">
+                        &quot;{String(p.explanation).slice(0, 140)}&quot;
+                      </div>
                     )}
                   </div>
                 )}
-                {agent === "difficulty" && (
+                {agent === "adjudicator" && (
                   <div>
-                    <span className="text-muted-foreground">sample {d.sampleIdx}:</span>{" "}
-                    <span className="text-foreground/80">{String(p.difficulty)}</span>{" "}
-                    <span className="text-muted-foreground">· {String(p.bloom)}</span>
-                    <div className="text-muted-foreground mt-0.5 italic">"{String(p.difficulty_rationale).slice(0, 120)}"</div>
-                  </div>
-                )}
-                {agent === "math" && (
-                  <div>
-                    has_equation: <span className="text-foreground/60">{String(p.has_equation)}</span>
-                    {Array.isArray(p.latex) && (p.latex as string[]).length > 0 && (
-                      <div className="mt-0.5 text-primary">{(p.latex as string[]).join("  ·  ")}</div>
-                    )}
-                  </div>
-                )}
-                {agent === "language" && (
-                  <div>
-                    <span className="text-foreground/70">{String(p.language)}</span>
-                    <span className="text-muted-foreground"> · code_mix {Number(p.code_mix_ratio).toFixed(2)}</span>
-                  </div>
-                )}
-                {agent === "critic" && (
-                  <div>
-                    passed: <span className={p.passed ? "text-foreground" : "text-rose-400"}>{String(p.passed)}</span>
+                    passed: <span className={p.passed ? "text-foreground" : "text-rose-400"}>{String(p.passed)}</span> ·{" "}
+                    {String(p.consensus)} · {String(p.final_label)}
                     {Array.isArray(p.failures) && (p.failures as string[]).length > 0 && (
                       <div className="mt-0.5 text-rose-400">{(p.failures as string[]).join("; ")}</div>
                     )}
                   </div>
                 )}
-                {d.latencyMs != null && (
-                  <div className="text-[9px] text-muted-foreground mt-0.5">{d.latencyMs}ms</div>
-                )}
+                {d.latencyMs != null && <div className="text-[9px] text-muted-foreground mt-0.5">{d.latencyMs}ms</div>}
               </div>
             );
           })}
@@ -495,97 +515,68 @@ function AnnotationForm({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Chapter</Label>
-          <Input value={payload.chapter} readOnly={!editable} onChange={(e) => set({ chapter: e.target.value })} className="text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Difficulty</Label>
-          <Select value={payload.difficulty} onValueChange={(v) => set({ difficulty: v as ReviewItem["payload"]["difficulty"] })} disabled={!editable}>
-            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+          <Label className="text-xs text-muted-foreground">Risk label</Label>
+          <Select
+            value={payload.risk_label}
+            onValueChange={(v) => set({ risk_label: v as ReviewItem["payload"]["risk_label"], final_label: v as ReviewItem["payload"]["final_label"] })}
+            disabled={!editable}
+          >
+            <SelectTrigger className="text-sm">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              <SelectItem value="easy">easy</SelectItem>
-              <SelectItem value="medium">medium</SelectItem>
-              <SelectItem value="hard">hard</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Bloom level</Label>
-          <Select value={payload.bloom} onValueChange={(v) => set({ bloom: v as ReviewItem["payload"]["bloom"] })} disabled={!editable}>
-            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="remember">remember</SelectItem>
-              <SelectItem value="understand">understand</SelectItem>
-              <SelectItem value="apply">apply</SelectItem>
-              <SelectItem value="analyze">analyze</SelectItem>
+              {RISK_LABELS.map((v) => (
+                <SelectItem key={v} value={v}>
+                  {v}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Language</Label>
-          <Select value={payload.language} onValueChange={(v) => set({ language: v as ReviewItem["payload"]["language"] })} disabled={!editable}>
-            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+          <Label className="text-xs text-muted-foreground">Recommended action</Label>
+          <Select
+            value={payload.recommended_action}
+            onValueChange={(v) => set({ recommended_action: v as ReviewItem["payload"]["recommended_action"] })}
+            disabled={!editable}
+          >
+            <SelectTrigger className="text-sm">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              <SelectItem value="en">en</SelectItem>
-              <SelectItem value="hi">hi</SelectItem>
-              <SelectItem value="hinglish">hinglish</SelectItem>
+              {ACTIONS.map((v) => (
+                <SelectItem key={v} value={v}>
+                  {v}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">Concepts (comma separated)</Label>
-        <Input
-          value={payload.concepts.join(", ")}
+        <Label className="text-xs text-muted-foreground">Explanation</Label>
+        <Textarea
+          value={payload.explanation}
           readOnly={!editable}
-          onChange={(e) => set({ concepts: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+          onChange={(e) => set({ explanation: e.target.value })}
           className="text-sm"
+          rows={3}
         />
       </div>
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">Difficulty rationale</Label>
+        <Label className="text-xs text-muted-foreground">Risk factors (comma separated)</Label>
         <Textarea
-          value={payload.difficulty_rationale}
+          value={(payload.risk_factors ?? []).join(", ")}
           readOnly={!editable}
-          onChange={(e) => set({ difficulty_rationale: e.target.value })}
+          onChange={(e) =>
+            set({
+              risk_factors: e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+            })
+          }
           className="text-sm"
-          rows={2}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Has equation</Label>
-          <Select value={String(payload.has_equation)} onValueChange={(v) => set({ has_equation: v === "true" })} disabled={!editable}>
-            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">true</SelectItem>
-              <SelectItem value="false">false</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Code-mix ratio</Label>
-          <Input
-            type="number"
-            step="0.05"
-            min="0"
-            max="1"
-            value={payload.code_mix_ratio}
-            readOnly={!editable}
-            onChange={(e) => set({ code_mix_ratio: parseFloat(e.target.value) || 0 })}
-            className="text-sm"
-          />
-        </div>
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">LaTeX (one per line)</Label>
-        <Textarea
-          value={payload.latex.join("\n")}
-          readOnly={!editable}
-          onChange={(e) => set({ latex: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
-          className="text-sm font-mono"
           rows={2}
         />
       </div>
@@ -599,8 +590,10 @@ function AnnotationForm({
           <span className="font-mono text-foreground/80">{payload.agreement.toFixed(2)}</span>
         </div>
         <div className="text-xs">
-          <span className="text-muted-foreground">route:</span>{" "}
-          <span className={cn("font-mono", payload.route === "auto" ? "text-foreground" : "text-foreground/60")}>{payload.route}</span>
+          <span className="text-muted-foreground">consensus:</span>{" "}
+          <span className={cn("font-mono", payload.consensus === "DISPUTED" ? "text-rose-400" : "text-foreground")}>
+            {payload.consensus}
+          </span>
         </div>
       </div>
     </div>
