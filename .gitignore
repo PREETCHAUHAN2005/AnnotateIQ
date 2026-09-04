@@ -58,3 +58,9 @@ server.log
 # local docs — keep markdown out of GitHub
 *.md
 *.docx
+
+# local SQLite — runtime jobs/annotations, do not push
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
