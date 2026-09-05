@@ -109,7 +109,7 @@ export function AppShell({
               className="hidden md:inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border/70 bg-muted/50 text-[10px] font-mono text-muted-foreground"
               title="Open command palette"
             >
-              ⌘K
+              ⌘K / Ctrl+K
             </kbd>
             <ThemeToggle />
           </div>

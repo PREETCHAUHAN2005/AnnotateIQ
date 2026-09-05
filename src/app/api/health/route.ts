@@ -29,6 +29,8 @@ export async function GET() {
       reviewedUnits: units.filter((u) => u.status === "reviewed").length,
       agentsAvailable: 9,
       dbConnected: true,
+      skipLlm: process.env.SKIP_LLM === "1",
+      demoDisagree: process.env.DEMO_DISAGREE === "1",
     });
   } catch {
     // Always 200 so clients can render a "down" state instead of spinning forever

@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  // Hide the Next.js issues badge during demo recordings
+  devIndicators: false,
 };
 
 export default nextConfig;
