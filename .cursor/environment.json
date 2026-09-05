@@ -1,0 +1,11 @@
+{
+  "name": "AnnotateIQ (Next.js 16 + Prisma/SQLite)",
+  "install": "bash .zscripts/cloud-agent-install.sh",
+  "terminals": [
+    {
+      "name": "next-dev",
+      "command": "export PATH=\"$HOME/.bun/bin:$PATH\" && bun run dev",
+      "description": "Next.js dev server (http://localhost:3000)"
+    }
+  ]
+}
