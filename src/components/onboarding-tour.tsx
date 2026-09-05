@@ -27,7 +27,7 @@ const TOUR_STEPS = [
   {
     icon: Sparkles,
     title: "Welcome to AnnotateIQ",
-    description: "A multi-agent payment-risk annotation engine. Specialists score transaction, behavior, device, and merchant signals. Fraud reasoning and an adjudicator produce explainable labels. Synthetic/public data only.",
+    description: "A multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models. Specialists, fraud reasoning, and an adjudicator produce the labels. Synthetic/public data only.",
     color: "text-primary",
   },
   {

@@ -23,6 +23,7 @@ import {
   XCircle,
   AlertTriangle,
   RotateCcw,
+  Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -195,7 +196,9 @@ export function PipelineView({
         if (d.route === "auto") setAutoCount((p) => p + 1);
         else setHumanCount((p) => p + 1);
         pushLog(
-          `Unit #${d.seq} → ${d.route === "auto" ? "AUTO-ACCEPT" : "HUMAN REVIEW"} (conf ${(d.confidence as number).toFixed(2)})`,
+          `Unit #${d.seq} → ${d.route === "auto" ? "AUTO-ACCEPT" : "HUMAN REVIEW"} (conf ${(d.confidence as number).toFixed(2)})${
+            d.risk_cluster_id ? ` · ${d.risk_cluster_id} ×${d.cluster_size ?? "?"}` : ""
+          }`,
           d.route === "auto" ? "ok" : "warn"
         );
         break;
@@ -267,7 +270,7 @@ export function PipelineView({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Live Pipeline</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Specialists → fraud reasoning → adjudicator. SSE-streamed, per event.
+            Specialists → fraud reasoning → adjudicator → ring analyst. SSE-streamed, per event.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -311,7 +314,7 @@ export function PipelineView({
             <Cpu className="h-4 w-4 text-primary" /> Agent fan-out
           </CardTitle>
           <CardDescription>
-            Four specialists in parallel, then fraud reasoning (k=3) and an adjudicator.
+            Four specialists in parallel, then fraud reasoning (k=3), an adjudicator, and a job-scoped ring analyst.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -359,6 +362,17 @@ export function PipelineView({
               tone="amber"
               active={running}
               count={criticPass + criticFail}
+            />
+            <div className="flex items-center justify-center">
+              <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 lg:rotate-0" />
+            </div>
+            <DiagramNode
+              icon={Share2}
+              label="Ring"
+              sub="job graph"
+              tone="violet"
+              active={(activeAgents.ring_analyst ?? 0) > 0}
+              count={totalAgents.ring_analyst}
             />
             <div className="flex items-center justify-center">
               <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 lg:rotate-0" />
@@ -484,7 +498,7 @@ export function PipelineView({
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">Agent calls per unit</span>
-                  <span className="font-mono font-bold">8 + 1 critic</span>
+                  <span className="font-mono font-bold">4 + 3 + adj + ring</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">Total agent calls</span>
@@ -496,7 +510,7 @@ export function PipelineView({
                 </div>
               </div>
               <div className="text-xs text-muted-foreground leading-relaxed">
-                The pipeline will fan out 8 parallel agents per unit, merge results, run the critic, and route based on confidence (≥0.85 → auto, &lt;0.85 → human).
+                Four specialists run in parallel, then fraud reasoning (k=3), the adjudicator, and a job-scoped ring analyst. Route is ≥0.85 → auto, DISPUTED or lower confidence → human.
               </div>
               <div className="flex gap-2 justify-end pt-2 border-t border-border/60">
                 <Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>

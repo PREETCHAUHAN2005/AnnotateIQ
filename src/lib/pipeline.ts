@@ -16,17 +16,20 @@ import {
   fallbackDeviceNetwork,
   fallbackFraudReasoning,
   fallbackMerchantOrder,
+  fallbackRingAnalyst,
   fallbackTransactionRisk,
   runAdjudicator,
   runBehavioral,
   runDeviceNetwork,
   runFraudReasoning,
   runMerchantOrder,
+  runRingAnalyst,
   runTransactionRisk,
   type SpecialistPacket,
   type UnitInput,
 } from "@/lib/agents";
 import { computeDerivedSignals, parseUnitEvent } from "@/lib/normalize";
+import { buildJobRings, emptyRing, type RingAssignment } from "@/lib/rings";
 import { CONCURRENCY, K, MAX_ATTEMPTS, routeFor, score } from "@/lib/scoring";
 import type {
   AdjudicatorOut,
@@ -35,6 +38,7 @@ import type {
   FraudReasoningOut,
   MerchantOrderOut,
   RecommendedAction,
+  RingAnalystOut,
   TransactionRiskOut,
   UnitAnnotation,
 } from "@/lib/schemas";
@@ -65,7 +69,19 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
   bus.publish(jobId, "unit:start", { unitId, seq: unit.seq, attempt });
 
   const event = parseUnitEvent(unit.rawText, unit.stem);
-  const siblings = await db.unit.findMany({ where: { jobId }, select: { rawText: true } });
+  const siblings = await db.unit.findMany({
+    where: { jobId },
+    select: { id: true, seq: true, rawText: true },
+  });
+  const ringEvents = siblings.flatMap((s) => {
+    try {
+      return [{ unitId: s.id, seq: s.seq, event: parseUnitEvent(s.rawText) }];
+    } catch {
+      return [];
+    }
+  });
+  const ringMap = buildJobRings(ringEvents);
+  const ringBase: RingAssignment = ringMap.get(unitId) ?? emptyRing(event.transaction_id);
   const sameDeviceInJob = event.device_id_hash
     ? siblings.filter((s) => {
         try {
@@ -263,6 +279,45 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     payload: adj,
     latencyMs: adjLatency,
   });
+
+  let ringOut: RingAnalystOut = fallbackRingAnalyst(ringBase);
+  let ringLatency = 1;
+  bus.publish(jobId, "agent:start", { unitId, agent: "ring_analyst", sampleIdx: 0 });
+  if (SKIP_LLM) {
+    ringOut = fallbackRingAnalyst(ringBase);
+  } else {
+    try {
+      const res = await runRingAnalyst(input, ringBase);
+      ringLatency = res.latencyMs;
+      if (res.value) {
+        ringOut = res.value;
+      }
+    } catch (e) {
+      bus.publish(jobId, "agent:error", {
+        unitId,
+        agent: "ring_analyst",
+        sampleIdx: 0,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      ringOut = fallbackRingAnalyst(ringBase);
+    }
+  }
+  drafts.push({
+    agent: "ring_analyst",
+    sampleIdx: 0,
+    attempt,
+    payload: { ...ringOut, risk_cluster_id: ringBase.risk_cluster_id, cluster_size: ringBase.cluster_size },
+    latencyMs: ringLatency,
+  });
+  bus.publish(jobId, "agent:done", {
+    unitId,
+    agent: "ring_analyst",
+    sampleIdx: 0,
+    latencyMs: ringLatency,
+    ok: true,
+    cluster: ringBase.risk_cluster_id,
+  });
+
   bus.publish(jobId, "critic:done", {
     unitId,
     passed: adj.passed,
@@ -319,9 +374,18 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
   }
 
   if (unit.isHoneypot && unit.goldPayload) {
-    const gold = JSON.parse(unit.goldPayload) as { risk_label?: string; recommended_action?: string };
-    const pass =
+    const gold = JSON.parse(unit.goldPayload) as {
+      risk_label?: string;
+      recommended_action?: string;
+      risk_cluster_id?: string | null;
+    };
+    const labelPass =
       gold.risk_label === adj.final_label && gold.recommended_action === adj.recommended_action;
+    const clusterPass =
+      !gold.risk_cluster_id ||
+      !ringBase.risk_cluster_id ||
+      gold.risk_cluster_id === ringBase.risk_cluster_id;
+    const pass = labelPass && clusterPass;
     await db.qualityEvent.create({
       data: {
         unitId,
@@ -329,7 +393,11 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
         kind: pass ? "honeypot_pass" : "honeypot_fail",
         detail: JSON.stringify({
           gold,
-          predicted: { risk_label: adj.final_label, recommended_action: adj.recommended_action },
+          predicted: {
+            risk_label: adj.final_label,
+            recommended_action: adj.recommended_action,
+            risk_cluster_id: ringBase.risk_cluster_id,
+          },
         }),
       },
     });
@@ -382,6 +450,12 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     behavior_anomaly: specialists.behavior_anomaly,
     device_risk: specialists.device_risk,
     merchant_context_risk: specialists.merchant_context_risk,
+    risk_cluster_id: ringBase.risk_cluster_id,
+    network_risk: ringOut.network_risk,
+    relationship_confidence: ringOut.relationship_confidence,
+    shared_entities: ringBase.shared_entities,
+    cluster_size: ringBase.cluster_size,
+    member_transaction_ids: ringBase.member_transaction_ids,
   };
 
   await db.final.upsert({
@@ -412,6 +486,8 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     criticPassed: adj.passed,
     consensus: adj.consensus,
     risk_label: adj.final_label,
+    risk_cluster_id: ringBase.risk_cluster_id,
+    cluster_size: ringBase.cluster_size,
   });
 }
 

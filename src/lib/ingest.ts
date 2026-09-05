@@ -1,23 +1,30 @@
 import { db } from "@/lib/db";
 import { buildHoneypotPool, SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
-import { toCanonicalEvent } from "@/lib/normalize";
+import {
+  loadIeeeIngestSpecs,
+  parseIeeePayload,
+  rowsToIngestSpecs,
+  type IeeeIngestSpec,
+} from "@/lib/ieee";
 import type { CanonicalPaymentEvent, GoldRisk } from "@/lib/schemas";
 
 export type Segment = { seq: number; page: number; stem: string };
 
 export function parseEventList(input: unknown): CanonicalPaymentEvent[] {
-  let raw = input;
+  return parseIngestSpecs(input).map((s) => s.event);
+}
+
+export function parseIngestSpecs(input: unknown): IeeeIngestSpec[] {
   if (typeof input === "string") {
-    const text = input.trim();
-    if (!text) return [];
-    raw = JSON.parse(text);
+    const parsed = parseIeeePayload(input);
+    return rowsToIngestSpecs(parsed.rows, parsed.identity);
   }
-  const arr = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
-  return arr.map((row, i) => {
-    const event = toCanonicalEvent(row);
-    if (!event.transaction_id) event.transaction_id = `TX_PASTE_${i + 1}`;
-    return event;
-  });
+  if (Array.isArray(input)) return rowsToIngestSpecs(input);
+  if (input && typeof input === "object") {
+    const parsed = parseIeeePayload(JSON.stringify(input));
+    return rowsToIngestSpecs(parsed.rows, parsed.identity);
+  }
+  return [];
 }
 
 export function segmentText(text: string): Segment[] {
@@ -45,15 +52,11 @@ export async function createJobFromSample(packId: string): Promise<string> {
 }
 
 export async function createJobFromText(filename: string, text: string): Promise<string> {
-  const events = parseEventList(text);
-  if (events.length === 0) {
-    throw new Error("No payment events found. Paste a JSON array of transactions.");
+  const specs = parseIngestSpecs(text);
+  if (specs.length === 0) {
+    throw new Error("No payment events found. Paste a JSON array, IEEE-shaped object, or CSV.");
   }
-  return createJobWithUnits(
-    filename,
-    "paste",
-    events.map((event, i) => ({ seq: i + 1, event }))
-  );
+  return createJobWithUnits(filename, "paste", specs);
 }
 
 export async function createJobFromEvents(
@@ -67,6 +70,12 @@ export async function createJobFromEvents(
     source,
     events.map((event, i) => ({ seq: i + 1, event }))
   );
+}
+
+export async function createJobFromIeee(): Promise<string> {
+  const specs = loadIeeeIngestSpecs();
+  if (specs.length === 0) throw new Error("No IEEE-CIS events found.");
+  return createJobWithUnits("IEEE-CIS sample", "ieee", specs);
 }
 
 type UnitSpec = {
@@ -83,13 +92,30 @@ async function createJobWithUnits(filename: string, source: string, specs: UnitS
   const honeypots = buildHoneypotPool();
   const honeypotCount = Math.max(1, Math.floor(specs.length / 6));
   const honeypotSlots = new Set<number>();
-  while (honeypotSlots.size < honeypotCount && honeypotSlots.size < specs.length) {
-    honeypotSlots.add(Math.floor(Math.random() * specs.length));
+  const nativeGoldIdx = specs.map((s, i) => (s.gold ? i : -1)).filter((i) => i >= 0);
+  const preferNative = source === "ieee" || (source === "paste" && nativeGoldIdx.length > 0);
+  const pool = preferNative && nativeGoldIdx.length ? nativeGoldIdx : specs.map((_, i) => i);
+  while (honeypotSlots.size < honeypotCount && honeypotSlots.size < pool.length) {
+    honeypotSlots.add(pool[Math.floor(Math.random() * pool.length)]);
   }
 
   const rows = specs.map((s, i) => {
     const slot = honeypotSlots.has(i);
-    if (slot && honeypots.length) {
+    if (slot && s.gold) {
+      const raw = JSON.stringify(s.event);
+      return {
+        jobId: job.id,
+        seq: s.seq,
+        page: 1,
+        rawText: raw,
+        stem: raw,
+        optionsJson: null,
+        isHoneypot: true,
+        goldPayload: JSON.stringify(s.gold),
+        status: "pending",
+      };
+    }
+    if (slot && honeypots.length && !preferNative) {
       const h = honeypots[Math.floor(Math.random() * honeypots.length)];
       const raw = JSON.stringify(h.event);
       return {

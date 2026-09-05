@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
         risk_factors?: string[];
         explanation?: string;
         behavioral_pattern?: string;
+        risk_cluster_id?: string | null;
+        shared_entities?: string[];
+        member_transaction_ids?: string[];
       };
       const haystack = [
         p.event?.transaction_id,
@@ -34,6 +37,9 @@ export async function GET(req: NextRequest) {
         (p.risk_factors ?? []).join(" "),
         p.explanation,
         p.behavioral_pattern,
+        p.risk_cluster_id,
+        (p.shared_entities ?? []).join(" "),
+        (p.member_transaction_ids ?? []).join(" "),
       ]
         .join(" ")
         .toLowerCase();
@@ -47,6 +53,7 @@ export async function GET(req: NextRequest) {
       if ((p.recommended_action ?? "").toLowerCase().includes(q)) matchedFields.push("recommended_action");
       if ((p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q))) matchedFields.push("risk_factors");
       if ((p.explanation ?? "").toLowerCase().includes(q)) matchedFields.push("explanation");
+      if ((p.risk_cluster_id ?? "").toLowerCase().includes(q)) matchedFields.push("risk_cluster_id");
 
       return {
         finalId: f.id,

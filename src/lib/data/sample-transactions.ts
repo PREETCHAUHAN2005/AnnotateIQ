@@ -10,17 +10,22 @@ export type SampleBatch = {
   units: { seq: number; event: SampleEvent }[];
 };
 
-const gold = (risk_label: GoldRisk["risk_label"], recommended_action: GoldRisk["recommended_action"]): GoldRisk => ({
+const gold = (
+  risk_label: GoldRisk["risk_label"],
+  recommended_action: GoldRisk["recommended_action"],
+  risk_cluster_id?: string | null
+): GoldRisk => ({
   risk_label,
   recommended_action,
+  ...(risk_cluster_id ? { risk_cluster_id } : {}),
 });
 
 export const SAMPLE_BATCHES: SampleBatch[] = [
   {
     id: "clean-retail",
-    filename: "synthetic_clean_retail.json",
+    filename: "Clean retail",
     kind: "clean",
-    description: "Everyday retail — mostly low risk, ALLOW. Synthetic only.",
+    description: "Everyday retail payments — mostly low risk, ALLOW. Synthetic only.",
     units: [
       {
         seq: 1,
@@ -223,7 +228,7 @@ export const SAMPLE_BATCHES: SampleBatch[] = [
   },
   {
     id: "velocity-spike",
-    filename: "synthetic_velocity_spike.json",
+    filename: "Velocity burst",
     kind: "velocity",
     description: "New accounts, burst attempts, unusual amounts. Synthetic only.",
     units: [
@@ -428,7 +433,7 @@ export const SAMPLE_BATCHES: SampleBatch[] = [
   },
   {
     id: "geo-device-abuse",
-    filename: "synthetic_geo_device_abuse.json",
+    filename: "Abuse ring",
     kind: "abuse",
     description: "Shared device/IP across customers — ring-shaped synthetic pattern.",
     units: [
@@ -454,7 +459,7 @@ export const SAMPLE_BATCHES: SampleBatch[] = [
           order_value: 45999,
           product_category: "electronics",
           payment_status: "captured",
-          gold: gold("HIGH", "HOLD"),
+          gold: gold("HIGH", "HOLD", "RING_DEV_dev_shared_d1"),
         },
       },
       {
@@ -479,7 +484,7 @@ export const SAMPLE_BATCHES: SampleBatch[] = [
           order_value: 8200,
           product_category: "apparel",
           payment_status: "captured",
-          gold: gold("HIGH", "STEP_UP_VERIFICATION"),
+          gold: gold("HIGH", "STEP_UP_VERIFICATION", "RING_DEV_dev_shared_d1"),
         },
       },
       {
@@ -528,7 +533,7 @@ export const SAMPLE_BATCHES: SampleBatch[] = [
           order_value: 98000,
           product_category: "jewelry",
           payment_status: "authorized",
-          gold: gold("CRITICAL", "REJECT"),
+          gold: gold("CRITICAL", "REJECT", "RING_DEV_dev_shared_d1"),
         },
       },
       {
@@ -626,7 +631,7 @@ export const SAMPLE_BATCHES: SampleBatch[] = [
           order_value: 15000,
           product_category: "gaming",
           payment_status: "failed",
-          gold: gold("HIGH", "REVIEW"),
+          gold: gold("HIGH", "REVIEW", "RING_DEV_dev_shared_d1"),
         },
       },
     ],
@@ -650,29 +655,3 @@ export function buildHoneypotPool() {
   }
   return pool;
 }
-
-/** Physics-era alias used by leftover imports */
-export const SAMPLE_PAPERS = SAMPLE_BATCHES.map((b) => ({
-  id: b.id,
-  filename: b.filename,
-  kind: b.kind === "clean" ? ("clean" as const) : b.kind === "velocity" ? ("scanned" as const) : ("figure-heavy" as const),
-  description: b.description,
-  units: b.units.map((u) => ({
-    seq: u.seq,
-    page: 1,
-    stem: JSON.stringify(u.event),
-    options: null as string[] | null,
-    gold: u.event.gold
-      ? {
-          chapter: u.event.gold.risk_label,
-          concepts: [] as string[],
-          difficulty: "medium" as const,
-          bloom: "apply" as const,
-          language: "en" as const,
-          codeMixRatio: 0,
-          hasEquation: false,
-          latex: [] as string[],
-        }
-      : undefined,
-  })),
-}));

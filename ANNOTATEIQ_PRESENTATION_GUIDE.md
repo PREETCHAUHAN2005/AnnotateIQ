@@ -32,15 +32,15 @@
 | Field | Value |
 |---|---|
 | **Name** | AnnotateIQ |
-| **Tagline** | Annotate questions at production grade |
-| **Domain** | AI / ML Data Annotation for Indian Education |
-| **Scope** | JEE Physics (Indian engineering entrance exam) |
-| **What it does** | Multi-agent AI system that labels exam questions in parallel, validates them with a critic, routes low-confidence ones to human review, and exports an ML-ready dataset |
+| **Tagline** | Annotate payment risk at inspectable grade |
+| **Domain** | AI / ML data annotation for payment risk and fraud operations |
+| **Scope** | Synthetic and public-shaped payment events (not Razorpay production data) |
+| **What it does** | Multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models |
 | **Built with** | Next.js 16, TypeScript, Prisma/SQLite, z-ai-web-dev-sdk (LLM), Tailwind CSS, Recharts, Framer Motion |
-| **Number of AI agents** | 5 (Taxonomy, Difficulty, Math, Language, Critic) |
+| **Number of AI agents** | 6 (Transaction Risk, Behavioral, Device/Network, Merchant/Order, Fraud Reasoning, Adjudicator) |
 | **Number of dashboard views** | 14 |
 | **API endpoints** | 20 |
-| **Demo data** | 3 exam papers, 24 questions, ~9 auto-accepted, ~15 human-routed |
+| **Demo data** | 3 dummy payment packs (8 events each) plus an IEEE-CIS-shaped fixture |
 
 ---
 
@@ -596,7 +596,7 @@ Here is a recommended 12-slide deck structure for a 5-minute pitch:
 ## 16. Talking Points for Each Slide
 
 ### Slide 1 — Title
-> "AnnotateIQ is a multi-agent AI system that labels JEE Physics questions at production grade — with a critic that validates, honeypots that verify, and a review queue that shows exactly where agents disagreed."
+> "AnnotateIQ is a multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models — with an adjudicator that validates, honeypots that verify, and a review queue that shows exactly where agents disagreed."
 
 ### Slide 2 — Problem
 > "India's EdTech industry generates millions of practice questions. Labeling them manually takes 4 minutes each — that's 4 weeks for 10,000 questions. Existing AI tools either label blindly with no quality control, or require full human review. There's no middle ground."

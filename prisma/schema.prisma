@@ -14,7 +14,7 @@ datasource db {
 model Job {
   id          String   @id @default(cuid())
   filename    String
-  source      String   @default("sample") // sample | paste | pdf
+  source      String   @default("sample") // sample | paste | ieee
   status      String   @default("pending") // pending|extracting|labeling|review|done|failed
   unitCount   Int      @default(0)
   autoCount   Int      @default(0)

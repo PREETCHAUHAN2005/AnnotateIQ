@@ -73,7 +73,12 @@ export function CompareView() {
     );
   }
 
-  const shortName = (f: string) => f.replace(/\.json$/i, "").replace(/_/g, " ").slice(0, 20);
+  const shortName = (f: string) =>
+    f
+      .replace(/\.(json|pdf)$/i, "")
+      .replace(/_/g, " ")
+      .trim()
+      .slice(0, 22);
 
   // best job by autoRate
   const best = jobs.reduce((a, b) => (b.autoRate > a.autoRate ? b : a));

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createJobFromEvents, createJobFromSample, createJobFromText } from "@/lib/ingest";
+import { createJobFromIeee, createJobFromSample, createJobFromText } from "@/lib/ingest";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
-import { getIeeeDatasetInfo, loadIeeeCanonicalEvents } from "@/lib/ieee";
+import { getIeeeDatasetInfo } from "@/lib/ieee";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
     let jobId: string;
 
     if (body.mode === "sample") {
-      const pack = SAMPLE_BATCHES.find((p) => p.id === body.paperId || p.id === body.packId) ?? SAMPLE_BATCHES[0];
+      const pack = SAMPLE_BATCHES.find((p) => p.id === body.packId) ?? SAMPLE_BATCHES[0];
       jobId = await createJobFromSample(pack.id);
     } else if (body.mode === "paste") {
       const text = String(body.text ?? "");
       const filename = String(body.filename ?? "pasted-events.json");
       if (text.trim().length < 2) {
-        return NextResponse.json({ error: "JSON too short" }, { status: 400 });
+        return NextResponse.json({ error: "Paste JSON or CSV of payment events." }, { status: 400 });
       }
       jobId = await createJobFromText(filename, text);
     } else if (body.mode === "ieee") {
@@ -32,8 +32,7 @@ export async function POST(req: NextRequest) {
       if (!info.available) {
         return NextResponse.json({ error: info.message }, { status: 400 });
       }
-      const events = loadIeeeCanonicalEvents();
-      jobId = await createJobFromEvents("ieee-cis-sample.json", events, "ieee");
+      jobId = await createJobFromIeee();
     } else {
       jobId = await createJobFromSample(SAMPLE_BATCHES[0].id);
     }
@@ -46,6 +45,9 @@ export async function POST(req: NextRequest) {
       message.includes("No payment events") ||
       message.includes("too short") ||
       message.includes("JSON") ||
+      message.includes("CSV") ||
+      message.includes("too large") ||
+      message.includes("Too many") ||
       message.includes("IEEE");
     return NextResponse.json({ error: message }, { status: clientError ? 400 : 500 });
   }

@@ -107,6 +107,12 @@ export type UnitAnnotation = {
   behavior_anomaly?: boolean;
   device_risk?: RiskLevel;
   merchant_context_risk?: RiskLevel;
+  risk_cluster_id?: string | null;
+  network_risk?: RiskLevel;
+  relationship_confidence?: number;
+  shared_entities?: string[];
+  cluster_size?: number;
+  member_transaction_ids?: string[];
 };
 
 export type AgentName =
@@ -115,7 +121,8 @@ export type AgentName =
   | "device_network"
   | "merchant_order"
   | "fraud_reasoning"
-  | "adjudicator";
+  | "adjudicator"
+  | "ring_analyst";
 
 export type Draft = {
   id: string;
@@ -327,4 +334,8 @@ export type IeeeDatasetInfo = {
   path: string;
   count: number;
   message: string;
+  identityAvailable?: boolean;
+  identityPath?: string;
+  identityCount?: number;
+  fraudGoldCount?: number;
 };

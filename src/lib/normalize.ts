@@ -47,6 +47,7 @@ export function fromDummy(raw: unknown): Event {
 /**
  * Map IEEE-CIS-like columns onto the canonical event.
  * Missing fields stay null. Does not require the full Kaggle dump.
+ * `isFraud` is intentionally omitted — honeypot gold only, never a specialist input.
  */
 export function fromIeeeCis(row: unknown): Event {
   const r = (row ?? {}) as Record<string, unknown>;

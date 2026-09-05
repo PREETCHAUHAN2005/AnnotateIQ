@@ -17,6 +17,7 @@ import {
   Thermometer,
   Hash,
   Code2,
+  Share2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -115,6 +116,21 @@ Look at product category, order value vs amount, refunds, chargebacks.
 If specialists include both LOW and HIGH/CRITICAL, consensus MUST be DISPUTED.
 Return {"passed":true,"failures":[],"consensus":"AGREED","final_label":"HIGH",...}`,
   },
+  {
+    id: "ring_analyst",
+    name: "RingAnalyst",
+    icon: Share2,
+    tone: "violet",
+    samples: 1,
+    temperature: 0,
+    owns: ["network_risk", "relationship_confidence", "explanation"],
+    description:
+      "Judges a precomputed job-scoped entity graph. Does not invent edges or a cluster id. The graph owns risk_cluster_id, shared_entities, cluster_size, and member ids.",
+    promptSnippet: `You are the Ring Analyst. Judge a precomputed job-scoped entity graph. Never invent edges or a new cluster id.
+- "network_risk": LOW | MEDIUM | HIGH | CRITICAL
+- "relationship_confidence": 0..1
+- "explanation": 1-2 sentences citing shared_entities already in the packet`,
+  },
 ];
 
 const toneClasses = {
@@ -135,7 +151,7 @@ export function ArchitectureView() {
           <Cpu className="h-6 w-6 text-primary" /> Agent Architecture
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Six stateless agents with disjoint field ownership. Specialists should disagree. The adjudicator marks AGREED or DISPUTED.
+          Seven agents: four specialists, fraud reasoning, an adjudicator, and a job-scoped ring layer. The graph is deterministic — RingAnalyst judges it, and does not invent edges.
         </p>
       </div>
 
@@ -166,7 +182,7 @@ export function ArchitectureView() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pipeline data flow</CardTitle>
-          <CardDescription>One event flows through specialists → fraud reasoning → adjudicator → route</CardDescription>
+          <CardDescription>Specialists → fraud reasoning → adjudicator → ring analyst → route</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col lg:flex-row items-stretch gap-3">

@@ -53,7 +53,6 @@ export const api = {
   listJobs: () => jfetch<{ jobs: Job[] }>("/api/jobs"),
   createJob: (body: {
     mode: "sample" | "paste" | "ieee";
-    paperId?: string;
     packId?: string;
     text?: string;
     filename?: string;

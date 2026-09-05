@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AnnotateIQ — Payment Risk Annotation Engine",
   description:
-    "Multi-agent pipeline that turns synthetic payment events into explainable, adjudicated risk labels. Public/synthetic data only — not Razorpay production data.",
+    "Multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models. Synthetic and public-shaped data only — not Razorpay production transactions.",
 };
 
 /** Runs before paint — prevents light/dark flash without a React <script> child. */

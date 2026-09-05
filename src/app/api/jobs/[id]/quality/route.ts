@@ -23,7 +23,11 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const comparisons: { agent: string; field: string; predicted: string; gold: string }[] = [];
   for (const u of honeypotUnits) {
     if (!u.goldPayload) continue;
-    const gold = JSON.parse(u.goldPayload) as { risk_label?: string; recommended_action?: string };
+    const gold = JSON.parse(u.goldPayload) as {
+      risk_label?: string;
+      recommended_action?: string;
+      risk_cluster_id?: string | null;
+    };
     const reasonDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
     for (const d of reasonDrafts) {
       const p = JSON.parse(d.payload) as { risk_label?: string; recommended_action?: string };
@@ -36,6 +40,20 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
           predicted: p.recommended_action,
           gold: gold.recommended_action,
         });
+    }
+    if (gold.risk_cluster_id) {
+      const ringDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "ring_analyst" && d.attempt === 1);
+      for (const d of ringDrafts) {
+        const p = JSON.parse(d.payload) as { risk_cluster_id?: string | null };
+        if (p.risk_cluster_id) {
+          comparisons.push({
+            agent: "ring_analyst",
+            field: "risk_cluster_id",
+            predicted: p.risk_cluster_id,
+            gold: gold.risk_cluster_id,
+          });
+        }
+      }
     }
   }
   const { perAgent } = honeypotAccuracy(comparisons);
@@ -133,6 +151,7 @@ function computeLatency(drafts: { agent: string; latencyMs: number | null; attem
     "merchant_order",
     "fraud_reasoning",
     "adjudicator",
+    "ring_analyst",
   ];
   const out: Record<string, { avg: number; min: number; max: number; count: number; p95: number }> = {};
   for (const agent of agents) {

@@ -32,6 +32,7 @@ import {
   Clock,
   TableProperties,
   Hash,
+  Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ export function UnitsView({ job }: { job: Job }) {
   const [search, setSearch] = useState("");
   const [routeFilter, setRouteFilter] = useState<"all" | "auto" | "human">("all");
   const [riskFilter, setRiskFilter] = useState<string>("all");
+  const [clusterFilter, setClusterFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("seq");
   const [sortAsc, setSortAsc] = useState(true);
   const [selected, setSelected] = useState<FinalRecord | null>(null);
@@ -81,12 +83,17 @@ export function UnitsView({ job }: { job: Job }) {
           (p.risk_label ?? "").toLowerCase().includes(q) ||
           (p.recommended_action ?? "").toLowerCase().includes(q) ||
           (p.explanation ?? "").toLowerCase().includes(q) ||
-          (p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q))
+          (p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q)) ||
+          (p.risk_cluster_id ?? "").toLowerCase().includes(q) ||
+          (p.member_transaction_ids ?? []).some((id) => id.toLowerCase().includes(q))
         );
       });
     }
     if (routeFilter !== "all") out = out.filter((f) => f.route === routeFilter);
     if (riskFilter !== "all") out = out.filter((f) => f.payload.risk_label === riskFilter);
+    if (clusterFilter === "in_ring") out = out.filter((f) => Boolean(f.payload.risk_cluster_id));
+    else if (clusterFilter === "solo") out = out.filter((f) => !f.payload.risk_cluster_id);
+    else if (clusterFilter !== "all") out = out.filter((f) => f.payload.risk_cluster_id === clusterFilter);
 
     const rank: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
     out.sort((a, b) => {
@@ -108,7 +115,15 @@ export function UnitsView({ job }: { job: Job }) {
       return sortAsc ? cmp : -cmp;
     });
     return out;
-  }, [finals, search, routeFilter, riskFilter, sortKey, sortAsc]);
+  }, [finals, search, routeFilter, riskFilter, clusterFilter, sortKey, sortAsc]);
+
+  const clusterIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const f of finals) {
+      if (f.payload.risk_cluster_id) ids.add(f.payload.risk_cluster_id);
+    }
+    return [...ids].sort();
+  }, [finals]);
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortAsc(!sortAsc);
@@ -147,7 +162,7 @@ export function UnitsView({ job }: { job: Job }) {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search txn id, merchant, risk label, action, factors..."
+                placeholder="Search txn id, merchant, risk, action, cluster, factors..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -175,8 +190,23 @@ export function UnitsView({ job }: { job: Job }) {
                 <SelectItem value="CRITICAL">CRITICAL</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={clusterFilter} onValueChange={setClusterFilter}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue placeholder="Cluster" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All clusters</SelectItem>
+                <SelectItem value="in_ring">In a ring</SelectItem>
+                <SelectItem value="solo">No ring</SelectItem>
+                {clusterIds.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          {(search || routeFilter !== "all" || riskFilter !== "all") && (
+          {(search || routeFilter !== "all" || riskFilter !== "all" || clusterFilter !== "all") && (
             <div className="flex items-center gap-2 mt-3 text-xs">
               <Filter className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">
@@ -187,6 +217,7 @@ export function UnitsView({ job }: { job: Job }) {
                   setSearch("");
                   setRouteFilter("all");
                   setRiskFilter("all");
+                  setClusterFilter("all");
                 }}
                 className="text-primary hover:underline ml-1"
               >
@@ -244,15 +275,16 @@ export function UnitsView({ job }: { job: Job }) {
                         <div className="truncate text-foreground/90 group-hover:text-primary transition">
                           {eventLine(f.payload)}
                         </div>
-                        {(f.payload.risk_factors ?? []).length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {f.payload.risk_factors.slice(0, 2).map((c, i) => (
-                              <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                {c}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {f.payload.risk_cluster_id && (
+                            <ClusterChip id={f.payload.risk_cluster_id} size={f.payload.cluster_size} />
+                          )}
+                          {(f.payload.risk_factors ?? []).slice(0, 2).map((c, i) => (
+                            <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {c}
+                            </span>
+                          ))}
+                        </div>
                       </td>
                       <td className="p-3 hidden md:table-cell">
                         <RiskBadge label={f.payload.risk_label} />
@@ -330,7 +362,35 @@ export function UnitsView({ job }: { job: Job }) {
                   <DetailItem label="Consensus" value={selected.payload.consensus} />
                   <DetailItem label="Chargeback risk" value={selected.payload.chargeback_risk} />
                   <DetailItem label="Behavioral pattern" value={selected.payload.behavioral_pattern} />
+                  <DetailItem label="Network risk" value={selected.payload.network_risk ?? "—"} />
+                  <DetailItem
+                    label="Cluster size"
+                    value={selected.payload.cluster_size != null ? String(selected.payload.cluster_size) : "1"}
+                  />
                 </div>
+
+                {selected.payload.risk_cluster_id && (
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Fraud ring</div>
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border/60 space-y-2">
+                      <ClusterChip id={selected.payload.risk_cluster_id} size={selected.payload.cluster_size} />
+                      {(selected.payload.shared_entities ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {selected.payload.shared_entities!.map((e) => (
+                            <span key={e} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                              {e}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {(selected.payload.member_transaction_ids ?? []).length > 0 && (
+                        <div className="text-[11px] font-mono text-foreground/80">
+                          Members: {selected.payload.member_transaction_ids!.join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Risk factors</div>
@@ -441,6 +501,16 @@ function ConfidenceBar({ value }: { value: number }) {
       </div>
       <span className="font-mono text-xs tabular-nums w-10 text-right">{value.toFixed(2)}</span>
     </div>
+  );
+}
+
+function ClusterChip({ id, size }: { id: string; size?: number }) {
+  return (
+    <Badge variant="outline" className="gap-1 text-[9px] font-mono border-foreground/25 text-foreground/80">
+      <Share2 className="h-2.5 w-2.5" />
+      {id}
+      {size != null && size > 1 ? <span className="text-muted-foreground">×{size}</span> : null}
+    </Badge>
   );
 }
 

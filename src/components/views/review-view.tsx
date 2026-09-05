@@ -35,6 +35,7 @@ import {
   Cpu,
   Layers,
   Activity,
+  Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ const AGENT_ORDER = [
   "merchant_order",
   "fraud_reasoning",
   "adjudicator",
+  "ring_analyst",
 ] as const;
 
 export function ReviewView({ job }: { job: Job }) {
@@ -258,6 +260,15 @@ export function ReviewView({ job }: { job: Job }) {
                           {it.payload.recommended_action}
                         </span>
                       </div>
+                      {it.payload.risk_cluster_id && (
+                        <div className="mt-1">
+                          <Badge variant="outline" className="gap-1 text-[9px] font-mono border-foreground/25">
+                            <Share2 className="h-2.5 w-2.5" />
+                            {it.payload.risk_cluster_id}
+                            {it.payload.cluster_size != null ? ` ×${it.payload.cluster_size}` : ""}
+                          </Badge>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -307,6 +318,20 @@ export function ReviewView({ job }: { job: Job }) {
                       <div className="mt-1 p-3 rounded-lg bg-muted/40 border border-border/60 text-sm leading-relaxed font-mono">
                         {eventSummary(current.payload.event ?? parseUnitEvent(current.stem, current.stem))}
                       </div>
+                      {current.payload.risk_cluster_id && (
+                        <div className="mt-2 space-y-1">
+                          <Badge variant="outline" className="gap-1 text-[10px] font-mono border-foreground/25">
+                            <Share2 className="h-3 w-3" />
+                            {current.payload.risk_cluster_id}
+                            {current.payload.cluster_size != null ? ` ×${current.payload.cluster_size}` : ""}
+                          </Badge>
+                          {(current.payload.member_transaction_ids ?? []).length > 0 && (
+                            <div className="text-[10px] font-mono text-muted-foreground">
+                              Members: {current.payload.member_transaction_ids!.join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Separator />
                     <DraftsPanel drafts={drafts} />
@@ -420,6 +445,7 @@ function draftKey(agent: string, p: Record<string, unknown>): string {
   if (agent === "merchant_order") return String(p.merchant_context_risk);
   if (agent === "fraud_reasoning") return `${p.risk_label}:${p.recommended_action}`;
   if (agent === "adjudicator") return `${p.consensus}:${p.final_label}`;
+  if (agent === "ring_analyst") return `${p.network_risk}:${p.risk_cluster_id ?? "none"}`;
   return JSON.stringify(p);
 }
 
@@ -435,6 +461,7 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
     merchant_order: Layers,
     fraud_reasoning: Bot,
     adjudicator: ShieldCheck,
+    ring_analyst: Share2,
   }[agent] ?? Bot;
   const Icon = icon;
 
@@ -488,6 +515,23 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
                     {String(p.consensus)} · {String(p.final_label)}
                     {Array.isArray(p.failures) && (p.failures as string[]).length > 0 && (
                       <div className="mt-0.5 text-rose-400">{(p.failures as string[]).join("; ")}</div>
+                    )}
+                  </div>
+                )}
+                {agent === "ring_analyst" && (
+                  <div>
+                    network_risk <span className="text-primary">{String(p.network_risk)}</span>
+                    {p.risk_cluster_id != null && (
+                      <>
+                        {" "}
+                        · {String(p.risk_cluster_id)}
+                        {p.cluster_size != null ? ` ×${String(p.cluster_size)}` : ""}
+                      </>
+                    )}
+                    {p.explanation != null && (
+                      <div className="text-muted-foreground mt-0.5 italic">
+                        &quot;{String(p.explanation).slice(0, 160)}&quot;
+                      </div>
                     )}
                   </div>
                 )}
@@ -580,6 +624,24 @@ function AnnotationForm({
           rows={2}
         />
       </div>
+      {payload.risk_cluster_id && (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Fraud ring (graph-owned, not editable)</Label>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <Badge variant="outline" className="gap-1 border-foreground/25">
+              <Share2 className="h-3 w-3" />
+              {payload.risk_cluster_id}
+              {payload.cluster_size != null ? ` ×${payload.cluster_size}` : ""}
+            </Badge>
+            {payload.network_risk && <span className="text-muted-foreground">network {payload.network_risk}</span>}
+          </div>
+          {(payload.member_transaction_ids ?? []).length > 0 && (
+            <div className="text-[10px] font-mono text-muted-foreground">
+              Members: {payload.member_transaction_ids!.join(", ")}
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-4 pt-1">
         <div className="text-xs">
           <span className="text-muted-foreground">confidence:</span>{" "}

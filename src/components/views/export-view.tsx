@@ -127,6 +127,11 @@ export function ExportView({ job }: { job: Job }) {
               { field: "agreement", type: "float", desc: "min field agreement" },
               { field: "route", type: "enum", desc: "auto | human" },
               { field: "reviewer_action", type: "enum", desc: "accept | edit | reject | auto" },
+              { field: "risk_cluster_id", type: "string?", desc: "job-scoped ring id (RING_DEV_…)" },
+              { field: "network_risk", type: "enum", desc: "graph-judged cluster risk" },
+              { field: "cluster_size", type: "int", desc: "events sharing the ring" },
+              { field: "shared_entities", type: "string[]", desc: "device / ip / customers" },
+              { field: "member_transaction_ids", type: "string[]", desc: "txn ids in the cluster" },
             ].map((f) => (
               <div key={f.field} className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
                 <div className="flex items-center gap-2">

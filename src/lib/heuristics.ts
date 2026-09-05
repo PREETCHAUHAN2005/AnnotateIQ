@@ -6,9 +6,11 @@ import type {
   DeviceNetworkOut,
   FraudReasoningOut,
   MerchantOrderOut,
+  RingAnalystOut,
   RiskLevel,
   TransactionRiskOut,
 } from "@/lib/schemas";
+import type { RingAssignment } from "@/lib/rings";
 
 const DEMO_DISAGREE = process.env.DEMO_DISAGREE === "1";
 
@@ -216,5 +218,21 @@ export function heuristicAdjudicator(
     disagreement_reason: disputed
       ? "Specialist risk levels span two or more grades; human review required."
       : null,
+  };
+}
+
+export function heuristicRingAnalyst(assignment: RingAssignment): RingAnalystOut {
+  if (!assignment.risk_cluster_id) {
+    return {
+      network_risk: "LOW",
+      relationship_confidence: 0,
+      explanation: "No multi-customer shared-device cluster in this job.",
+    };
+  }
+  const members = assignment.member_transaction_ids.join(", ");
+  return {
+    network_risk: assignment.network_risk,
+    relationship_confidence: assignment.relationship_confidence,
+    explanation: `${assignment.risk_cluster_id} links ${assignment.cluster_size} events (${members}) via ${assignment.shared_entities.join(", ") || "shared entities"}. Edges come from the job graph — not invented.`,
   };
 }

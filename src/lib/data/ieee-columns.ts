@@ -1,0 +1,15 @@
+export const IEEE_COLUMN_MAP = [
+  { ieee: "TransactionID", canonical: "transaction_id", notes: "required join key" },
+  { ieee: "TransactionDT", canonical: "timestamp", notes: "seconds from an arbitrary origin; stored as string" },
+  { ieee: "TransactionAmt", canonical: "amount / order_value", notes: "" },
+  { ieee: "ProductCD", canonical: "merchant_id (M_{code}) / product_category", notes: "W H C S R" },
+  { ieee: "card1", canonical: "customer_id", notes: "card token stand-in; not PII" },
+  { ieee: "card4 + card6", canonical: "payment_method", notes: "e.g. visa_debit" },
+  { ieee: "addr1", canonical: "billing_region", notes: "numeric region code" },
+  { ieee: "addr2", canonical: "shipping_region", notes: "falls back to addr1" },
+  { ieee: "P_emaildomain / id_14", canonical: "ip_region", notes: "email domain or identity timezone" },
+  { ieee: "D1", canonical: "account_age", notes: "days since first seen" },
+  { ieee: "DeviceType / DeviceInfo / id_30 / id_31", canonical: "device_type", notes: "identity table when present" },
+  { ieee: "DeviceInfo", canonical: "device_id_hash", notes: "hashed / device string; not a real IMEI" },
+  { ieee: "isFraud", canonical: "(not stored)", notes: "honeypot gold only — never on the event, never exported as risk_label" },
+] as const;

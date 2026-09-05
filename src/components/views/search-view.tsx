@@ -48,7 +48,7 @@ export function SearchView({
     return () => clearTimeout(t);
   }, [query]);
 
-  const suggestions = ["HIGH", "CRITICAL", "ALLOW", "REJECT", "geo_mismatch", "device_reuse", "velocity"];
+  const suggestions = ["HIGH", "CRITICAL", "ALLOW", "REJECT", "geo_mismatch", "device_reuse", "velocity", "RING_DEV"];
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -57,7 +57,7 @@ export function SearchView({
           <Search className="h-6 w-6 text-primary" /> Global Search
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Search annotated events by transaction id, merchant, risk label, action, factors, or explanation.
+          Search annotated events by transaction id, merchant, risk label, action, factors, cluster id, or explanation.
         </p>
       </div>
 

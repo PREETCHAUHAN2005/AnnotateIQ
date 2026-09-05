@@ -54,7 +54,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
 function goldPredictedDiff(gold: Record<string, unknown> | null, predicted: Record<string, unknown> | null) {
   if (!gold || !predicted) return [];
-  const fields = ["risk_label", "recommended_action"];
+  const fields = gold.risk_cluster_id
+    ? ["risk_label", "recommended_action", "risk_cluster_id"]
+    : ["risk_label", "recommended_action"];
   return fields.map((f) => ({
     field: f,
     gold: String(gold[f] ?? ""),

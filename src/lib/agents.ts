@@ -5,6 +5,7 @@ import {
   parseDeviceNetwork,
   parseFraudReasoning,
   parseMerchantOrder,
+  parseRingAnalyst,
   parseTransactionRisk,
   RISK_FACTORS,
   type AdjudicatorOut,
@@ -14,6 +15,7 @@ import {
   type DeviceNetworkOut,
   type FraudReasoningOut,
   type MerchantOrderOut,
+  type RingAnalystOut,
   type RiskLevel,
   type TransactionRiskOut,
 } from "@/lib/schemas";
@@ -23,8 +25,10 @@ import {
   heuristicDeviceNetwork,
   heuristicFraudReasoning,
   heuristicMerchantOrder,
+  heuristicRingAnalyst,
   heuristicTransactionRisk,
 } from "@/lib/heuristics";
+import type { RingAssignment } from "@/lib/rings";
 
 export type UnitInput = {
   unitId: string;
@@ -180,4 +184,25 @@ export function fallbackAdjudicator(
   merged: { risk_label: RiskLevel; recommended_action: string; explanation: string }
 ) {
   return heuristicAdjudicator(specialists, merged);
+}
+
+export async function runRingAnalyst(
+  unit: UnitInput,
+  assignment: RingAssignment
+): Promise<{ value: RingAnalystOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Ring Analyst. Judge a precomputed job-scoped entity graph. Never invent edges or a new cluster id.
+- "network_risk": LOW | MEDIUM | HIGH | CRITICAL
+- "relationship_confidence": 0..1
+- "explanation": 1-2 sentences citing shared_entities already in the packet
+
+If risk_cluster_id is null, network_risk must be LOW and confidence 0.`;
+  const user = `${eventBlock(unit.event, unit.derived)}
+
+Graph assignment (deterministic, do not invent members):
+${JSON.stringify(assignment)}`;
+  return structuredComplete(sys, user, parseRingAnalyst, { temperature: 0 });
+}
+
+export function fallbackRingAnalyst(assignment: RingAssignment) {
+  return heuristicRingAnalyst(assignment);
 }

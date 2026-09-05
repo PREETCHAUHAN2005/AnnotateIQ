@@ -7,9 +7,6 @@ export const RISK_FACTORS = taxonomy.risk_factors as readonly string[];
 export const BEHAVIORAL_PATTERNS = taxonomy.behavioral_patterns as readonly string[];
 export const CHARGEBACK_LEVELS = taxonomy.chargeback_levels as readonly string[];
 
-/** @deprecated physics leftover — risk labels occupy this export for old imports */
-export const CHAPTERS: string[] = [...RISK_LABELS];
-
 export const RiskLevel = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export type RiskLevel = z.infer<typeof RiskLevel>;
 
@@ -115,17 +112,12 @@ export const AdjudicatorOut = z.object({
 });
 export type AdjudicatorOut = z.infer<typeof AdjudicatorOut>;
 
-/** Physics-era aliases so leftover imports compile during the swap */
-export const TaxonomyOut = TransactionRiskOut;
-export type TaxonomyOut = TransactionRiskOut;
-export const DifficultyOut = BehavioralOut;
-export type DifficultyOut = BehavioralOut;
-export const MathOut = DeviceNetworkOut;
-export type MathOut = DeviceNetworkOut;
-export const LanguageOut = MerchantOrderOut;
-export type LanguageOut = MerchantOrderOut;
-export const CriticOut = AdjudicatorOut;
-export type CriticOut = AdjudicatorOut;
+export const RingAnalystOut = z.object({
+  network_risk: RiskLevel,
+  relationship_confidence: z.number().min(0).max(1),
+  explanation: z.string().min(1),
+});
+export type RingAnalystOut = z.infer<typeof RingAnalystOut>;
 
 export const UnitAnnotation = z.object({
   unit_id: z.string(),
@@ -151,12 +143,19 @@ export const UnitAnnotation = z.object({
   behavior_anomaly: z.boolean().optional(),
   device_risk: RiskLevel.optional(),
   merchant_context_risk: RiskLevel.optional(),
+  risk_cluster_id: z.string().nullable().optional(),
+  network_risk: RiskLevel.optional(),
+  relationship_confidence: z.number().min(0).max(1).optional(),
+  shared_entities: z.array(z.string()).optional(),
+  cluster_size: z.number().int().min(1).optional(),
+  member_transaction_ids: z.array(z.string()).optional(),
 });
 export type UnitAnnotation = z.infer<typeof UnitAnnotation>;
 
 export const GoldRisk = z.object({
   risk_label: RiskLevel,
   recommended_action: RecommendedAction,
+  risk_cluster_id: z.string().nullable().optional(),
 });
 export type GoldRisk = z.infer<typeof GoldRisk>;
 
@@ -177,6 +176,9 @@ export function parseFraudReasoning(raw: unknown): FraudReasoningOut {
 }
 export function parseAdjudicator(raw: unknown): AdjudicatorOut {
   return AdjudicatorOut.parse(raw);
+}
+export function parseRingAnalyst(raw: unknown): RingAnalystOut {
+  return RingAnalystOut.parse(raw);
 }
 
 export function parseTaxonomy(raw: unknown): TransactionRiskOut {

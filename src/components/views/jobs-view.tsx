@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { IeeeDatasetInfo, Job } from "@/lib/types";
 import { api } from "@/lib/api";
+import { IEEE_COLUMN_MAP } from "@/lib/data/ieee-columns";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export function JobsView({
   const createSample = async (packId: string) => {
     setCreating(true);
     try {
-      const { job } = await api.createJob({ mode: "sample", paperId: packId, packId });
+      const { job } = await api.createJob({ mode: "sample", packId });
       onJobCreated(job);
       toast.success(`Created job from ${job.filename}`);
     } catch (e) {
@@ -83,8 +84,8 @@ export function JobsView({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Jobs & ingest</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Create a batch from synthetic payment packs, paste a JSON array of events, or load an IEEE-CIS-shaped
-          fixture. Public/synthetic data only — not Razorpay production transactions.
+          Create a batch from synthetic payment packs, paste or upload JSON/CSV, or load an IEEE-CIS-shaped
+          fixture. Public/synthetic data only — not Razorpay production transactions. This app never downloads Kaggle.
         </p>
       </div>
 
@@ -94,7 +95,7 @@ export function JobsView({
             <FileText className="h-4 w-4" /> Dummy packs
           </TabsTrigger>
           <TabsTrigger value="paste" className="gap-2">
-            <FileUp className="h-4 w-4" /> Paste JSON
+            <FileUp className="h-4 w-4" /> Paste / upload
           </TabsTrigger>
           <TabsTrigger value="ieee" className="gap-2">
             <Database className="h-4 w-4" /> IEEE-CIS
@@ -141,14 +142,38 @@ export function JobsView({
             <CardContent className="p-5 space-y-3">
               <div className="font-medium text-sm">IEEE-CIS shaped fixture</div>
               <p className="text-xs text-muted-foreground">
-                This app never downloads Kaggle. Drop a JSON array at <code className="text-primary">data/ieee-cis-sample.json</code>{" "}
-                with columns like TransactionID, TransactionAmt, ProductCD, DeviceType. A small demo fixture ships in-repo.
+                This app never downloads Kaggle. Drop JSON or CSV at <code className="text-primary">data/ieee-cis-sample.json</code>{" "}
+                (or paste/upload on the other tab). Optional identity join:{" "}
+                <code className="text-primary">data/ieee-cis-identity.json</code> on TransactionID. Cap is 400 events / 1.5 MB.
               </p>
               <p className="text-xs text-muted-foreground">{ieee?.message ?? "Checking fixture…"}</p>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                <Badge variant="outline">{ieee?.count ?? 0} txn rows</Badge>
+                <Badge variant="outline">
+                  identity {ieee?.identityAvailable ? `${ieee.identityCount ?? 0} rows` : "not dropped"}
+                </Badge>
+                <Badge variant="outline">isFraud gold {ieee?.fraudGoldCount ?? 0} (honeypot only)</Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                <code className="text-primary">isFraud</code> becomes honeypot gold only. Specialists never see it, and it is
+                never exported as <code className="text-primary">risk_label</code>.
+              </p>
               <Button onClick={createIeee} disabled={creating || !ieee?.available} className="gap-2">
                 {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
                 Load IEEE-CIS sample ({ieee?.count ?? 0} rows)
               </Button>
+              <div className="pt-2 border-t border-border/60">
+                <div className="text-xs font-medium mb-2">Column map</div>
+                <div className="grid sm:grid-cols-2 gap-1.5">
+                  {IEEE_COLUMN_MAP.map((row) => (
+                    <div key={row.ieee} className="text-[10px] font-mono leading-relaxed">
+                      <span className="text-primary">{row.ieee}</span>
+                      <span className="text-muted-foreground"> → {row.canonical}</span>
+                      {row.notes ? <span className="text-muted-foreground"> · {row.notes}</span> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -190,9 +215,20 @@ function PasteForm({ onJobCreated }: { onJobCreated: (job: Job) => void }) {
   const [filename, setFilename] = useState("pasted-events.json");
   const [loading, setLoading] = useState(false);
 
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > 1_500_000) {
+      toast.error("File too large (cap 1.5 MB). Split it locally — no Kaggle dump ingest.");
+      return;
+    }
+    const body = await file.text();
+    setFilename(file.name || "uploaded-events");
+    setText(body);
+  };
+
   const submit = async () => {
     if (text.trim().length < 2) {
-      toast.error("Paste a JSON array of payment events.");
+      toast.error("Paste or upload a JSON array or IEEE-shaped CSV.");
       return;
     }
     setLoading(true);
@@ -216,16 +252,28 @@ function PasteForm({ onJobCreated }: { onJobCreated: (job: Job) => void }) {
           <Input id="fname" value={filename} onChange={(e) => setFilename(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ptext">JSON array of events</Label>
+          <Label htmlFor="pfile">Upload JSON or CSV</Label>
+          <Input
+            id="pfile"
+            type="file"
+            accept=".json,.csv,.txt,application/json,text/csv"
+            onChange={(e) => onFile(e.target.files?.[0])}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ptext">JSON array, IEEE object, or CSV</Label>
           <Textarea
             id="ptext"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={'[\n  {"transaction_id":"TX_1","amount":1200,"payment_method":"upi","ip_region":"IN-MH","billing_region":"IN-MH"}\n]'}
+            placeholder={'TransactionID,TransactionAmt,ProductCD,isFraud\n2987000,68.5,W,0\n\nor JSON:\n[{"transaction_id":"TX_1","amount":1200}]'}
             className="min-h-[200px] font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            Each object is normalized to the canonical payment event. Extra fields are ignored.
+            Same normalizer as the IEEE fixture. Optional{" "}
+            <code className="text-primary">{`{ "transactions": [], "identity": [] }`}</code> join.{" "}
+            <code className="text-primary">isFraud</code> is stripped from stored events and used as honeypot gold only.
+            Cap 400 events / 1.5 MB.
           </p>
         </div>
         <Button onClick={submit} disabled={loading} className="gap-2">

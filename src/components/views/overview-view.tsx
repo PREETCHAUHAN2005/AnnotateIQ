@@ -50,9 +50,11 @@ export function OverviewView({
                 Annotate payment risk at <span className="text-gradient-emerald">inspectable grade</span>
               </h1>
               <p className="mt-3 text-muted-foreground max-w-2xl">
-                Four specialists score each payment event. A fraud-reasoning agent proposes a label.
-                An adjudicator marks AGREED or DISPUTED. Low-confidence and disputed units go to humans.
-                Synthetic or public-shaped data only — not Razorpay production transactions.
+                A multi-agent system that annotates payment events so teams can train better fraud and
+                decision models. Four specialists score transaction, behavior, device, and merchant
+                signals. Fraud reasoning proposes a label; an adjudicator marks AGREED or DISPUTED.
+                Low-confidence or disputed events go to humans. Synthetic or public-shaped data only —
+                not Razorpay production transactions.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button onClick={onGoToJobs} className="gap-2">

@@ -34,9 +34,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const DIFF_COLORS = ["var(--foreground)", "var(--muted-foreground)", "#f87171"];
-const BLOOM_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
-const LANG_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
+const RISK_COLORS = ["var(--foreground)", "var(--muted-foreground)", "#f87171"];
+const ACTION_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
+const CONSENSUS_COLORS = ["var(--foreground)", "var(--muted-foreground)", "var(--muted-foreground)"];
 
 export function InsightsView() {
   const [stats, setStats] = useState<InsightsStats | null>(null);
@@ -97,7 +97,7 @@ export function InsightsView() {
 
   // trend data for charts
   const trendData = trends.map((t) => ({
-    name: t.filename.replace(/\.json$/i, "").replace(/_/g, " ").slice(0, 15),
+    name: t.filename.replace(/\.(json|pdf)$/i, "").replace(/_/g, " ").trim().slice(0, 18),
     autoRate: Math.round(t.autoRate * 100),
     avgConf: Number(t.avgConfidence.toFixed(2)),
     kappa: Number(t.kappa.toFixed(3)),
@@ -105,7 +105,7 @@ export function InsightsView() {
   }));
 
   const cumulativeData = trends.map((t) => ({
-    name: t.filename.replace(/\.json$/i, "").replace(/_/g, " ").slice(0, 15),
+    name: t.filename.replace(/\.(json|pdf)$/i, "").replace(/_/g, " ").trim().slice(0, 18),
     units: t.cumulativeUnits,
     auto: t.cumulativeAuto,
     human: t.cumulativeHuman,
@@ -255,7 +255,7 @@ export function InsightsView() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={riskData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
-                    {riskData.map((_, i) => <Cell key={i} fill={DIFF_COLORS[i % DIFF_COLORS.length]} />)}
+                    {riskData.map((_, i) => <Cell key={i} fill={RISK_COLORS[i % RISK_COLORS.length]} />)}
                   </Pie>
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>
@@ -278,7 +278,7 @@ export function InsightsView() {
                   <YAxis allowDecimals={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} cursor={{ fill: "var(--accent)" }} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {actionData.map((_, i) => <Cell key={i} fill={BLOOM_COLORS[i % BLOOM_COLORS.length]} />)}
+                    {actionData.map((_, i) => <Cell key={i} fill={ACTION_COLORS[i % ACTION_COLORS.length]} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -296,7 +296,7 @@ export function InsightsView() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={consensusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={(e) => `${e.name}: ${e.value}`}>
-                    {consensusData.map((_, i) => <Cell key={i} fill={LANG_COLORS[i % LANG_COLORS.length]} />)}
+                    {consensusData.map((_, i) => <Cell key={i} fill={CONSENSUS_COLORS[i % CONSENSUS_COLORS.length]} />)}
                   </Pie>
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 </PieChart>
