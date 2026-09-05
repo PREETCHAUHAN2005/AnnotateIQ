@@ -30,6 +30,7 @@ import {
   Hash,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import taxonomy from "@/lib/data/taxonomy.json";
 
 export function TaxonomyView() {
   const [stats, setStats] = useState<TaxonomyStats | null>(null);
@@ -97,8 +98,35 @@ export function TaxonomyView() {
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
           {stats.coveredLabels} of {stats.totalLabels} risk labels seen across {stats.totalEvents} annotated events.
+          Failure jobs also use a closed failure_reason / retryability set.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Failure closed sets</CardTitle>
+          <CardDescription>Used on Job.kind=failure. Chargeback stays a field, not a job type.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid sm:grid-cols-2 gap-3">
+          {[
+            { label: "failure_reason", values: taxonomy.failure_reasons },
+            { label: "retryability", values: taxonomy.retryability },
+            { label: "routing_implication", values: taxonomy.routing_implications },
+            { label: "likely_resolution", values: taxonomy.likely_resolutions },
+          ].map((row) => (
+            <div key={row.label}>
+              <div className="text-xs font-mono text-primary mb-1.5">{row.label}</div>
+              <div className="flex flex-wrap gap-1">
+                {row.values.map((v) => (
+                  <Badge key={v} variant="outline" className="text-[10px] font-mono">
+                    {v}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-border/60 card-hover">

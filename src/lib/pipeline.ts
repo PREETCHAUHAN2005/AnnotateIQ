@@ -12,17 +12,22 @@ if (typeof process !== "undefined") {
 
 import {
   fallbackAdjudicator,
+  fallbackAdjudicatorFailure,
   fallbackBehavioral,
   fallbackDeviceNetwork,
+  fallbackFailureClassifier,
   fallbackFraudReasoning,
   fallbackMerchantOrder,
+  fallbackRetryRouting,
   fallbackRingAnalyst,
   fallbackTransactionRisk,
   runAdjudicator,
   runBehavioral,
   runDeviceNetwork,
+  runFailureClassifier,
   runFraudReasoning,
   runMerchantOrder,
+  runRetryRouting,
   runRingAnalyst,
   runTransactionRisk,
   type SpecialistPacket,
@@ -30,14 +35,16 @@ import {
 } from "@/lib/agents";
 import { computeDerivedSignals, parseUnitEvent } from "@/lib/normalize";
 import { buildJobRings, emptyRing, type RingAssignment } from "@/lib/rings";
-import { CONCURRENCY, K, MAX_ATTEMPTS, routeFor, score } from "@/lib/scoring";
+import { CONCURRENCY, FAILURE_CRITICAL_FIELDS, K, MAX_ATTEMPTS, routeFor, score } from "@/lib/scoring";
 import type {
   AdjudicatorOut,
   BehavioralOut,
   DeviceNetworkOut,
+  FailureClassifierOut,
   FraudReasoningOut,
   MerchantOrderOut,
   RecommendedAction,
+  RetryRoutingOut,
   RingAnalystOut,
   TransactionRiskOut,
   UnitAnnotation,
@@ -60,6 +67,8 @@ function majority<T extends string>(vals: T[]): T {
 export async function processUnit(jobId: string, unitId: string): Promise<void> {
   const unit = await db.unit.findUnique({ where: { id: unitId } });
   if (!unit) return;
+  const jobMeta = await db.job.findUnique({ where: { id: jobId }, select: { kind: true } });
+  const isFailure = jobMeta?.kind === "failure";
   const attempt = (unit.attempt || 0) + 1;
 
   await db.unit.update({
@@ -189,6 +198,34 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     ),
   ]);
 
+  let failOut: FailureClassifierOut | undefined;
+  let retryOut: RetryRoutingOut | undefined;
+  if (isFailure) {
+    await safe(
+      "failure_classifier",
+      0,
+      SKIP_LLM
+        ? async () => ({ value: null, raw: "", latencyMs: 0 })
+        : () => runFailureClassifier(input),
+      () => fallbackFailureClassifier(event),
+      (v) => {
+        failOut = v;
+      }
+    );
+    const reason = failOut?.failure_reason ?? "unknown";
+    await safe(
+      "retry_routing",
+      0,
+      SKIP_LLM
+        ? async () => ({ value: null, raw: "", latencyMs: 0 })
+        : () => runRetryRouting(input, reason),
+      () => fallbackRetryRouting(event, reason),
+      (v) => {
+        retryOut = v;
+      }
+    );
+  }
+
   const specialists: SpecialistPacket = {
     transaction_risk: txnOut?.transaction_risk ?? "MEDIUM",
     behavior_anomaly: behOut?.behavior_anomaly ?? false,
@@ -252,12 +289,17 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     risk_factors: mergedReason?.risk_factors ?? [],
   };
 
+  const failureForAdj =
+    isFailure && failOut && retryOut
+      ? { failure_reason: failOut.failure_reason, retryability: retryOut.retryability }
+      : undefined;
+
   if (SKIP_LLM) {
     adj = fallbackAdjudicator(specialists, mergedForAdj);
     adjLatency = 1;
   } else {
     try {
-      const res = await runAdjudicator(input, specialists, mergedForAdj);
+      const res = await runAdjudicator(input, specialists, mergedForAdj, failureForAdj);
       adjLatency = res.latencyMs;
       if (res.value) adj = res.value;
       else adj = fallbackAdjudicator(specialists, mergedForAdj);
@@ -270,6 +312,17 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
       });
       adj = fallbackAdjudicator(specialists, mergedForAdj);
     }
+  }
+
+  if (isFailure && failOut && retryOut) {
+    const fAdj = fallbackAdjudicatorFailure(event, failOut, retryOut);
+    adj = {
+      ...adj,
+      passed: adj.passed && fAdj.passed,
+      failures: [...adj.failures, ...fAdj.failures],
+      consensus: adj.consensus === "DISPUTED" || fAdj.disputed ? "DISPUTED" : adj.consensus,
+      disagreement_reason: adj.disagreement_reason ?? fAdj.disagreement_reason,
+    };
   }
 
   drafts.push({
@@ -328,9 +381,15 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
 
   const disputed = adj.consensus === "DISPUTED";
   const { confidence, agreement } = score(
-    { risk_label: labelSamples, recommended_action: actionSamples },
+    {
+      risk_label: labelSamples,
+      recommended_action: actionSamples,
+      failure_reason: failOut ? [failOut.failure_reason] : [],
+      retryability: retryOut ? [retryOut.retryability] : [],
+    },
     adj.passed,
-    disputed
+    disputed,
+    isFailure ? FAILURE_CRITICAL_FIELDS : undefined
   );
   const route = routeFor(confidence, disputed);
 
@@ -378,6 +437,8 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
       risk_label?: string;
       recommended_action?: string;
       risk_cluster_id?: string | null;
+      failure_reason?: string;
+      retryability?: string;
     };
     const labelPass =
       gold.risk_label === adj.final_label && gold.recommended_action === adj.recommended_action;
@@ -385,7 +446,9 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
       !gold.risk_cluster_id ||
       !ringBase.risk_cluster_id ||
       gold.risk_cluster_id === ringBase.risk_cluster_id;
-    const pass = labelPass && clusterPass;
+    const failPass = !gold.failure_reason || gold.failure_reason === failOut?.failure_reason;
+    const retryPass = !gold.retryability || gold.retryability === retryOut?.retryability;
+    const pass = labelPass && clusterPass && failPass && retryPass;
     await db.qualityEvent.create({
       data: {
         unitId,
@@ -397,6 +460,8 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
             risk_label: adj.final_label,
             recommended_action: adj.recommended_action,
             risk_cluster_id: ringBase.risk_cluster_id,
+            failure_reason: failOut?.failure_reason,
+            retryability: retryOut?.retryability,
           },
         }),
       },
@@ -424,7 +489,13 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     ...(behOut?.evidence ?? []),
     ...(devOut?.evidence ?? []),
     ...(merOut?.evidence ?? []),
+    ...(failOut?.evidence ?? []),
+    ...(retryOut?.evidence ?? []),
   ];
+
+  const explanation = isFailure
+    ? `${mergedReason?.explanation ?? "Adjudicated from specialist signals."} Failure: ${failOut?.failure_reason ?? "unknown"} (${failOut?.failure_severity ?? "MEDIUM"}). Retry: ${retryOut?.retryability ?? "unknown"} → ${retryOut?.routing_implication ?? "unknown"}.`
+    : (mergedReason?.explanation ?? adj.disagreement_reason ?? "Adjudicated from specialist signals.");
 
   const annotation: UnitAnnotation = {
     unit_id: unitId,
@@ -438,7 +509,7 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     chargeback_risk: mergedReason?.chargeback_risk ?? "LOW",
     recommended_action: adj.recommended_action,
     evidence,
-    explanation: mergedReason?.explanation ?? adj.disagreement_reason ?? "Adjudicated from specialist signals.",
+    explanation,
     final_label: adj.final_label,
     final_score: confidence,
     confidence,
@@ -456,6 +527,20 @@ export async function processUnit(jobId: string, unitId: string): Promise<void> 
     shared_entities: ringBase.shared_entities,
     cluster_size: ringBase.cluster_size,
     member_transaction_ids: ringBase.member_transaction_ids,
+    ...(failOut
+      ? {
+          failure_reason: failOut.failure_reason,
+          failure_severity: failOut.failure_severity,
+        }
+      : {}),
+    ...(retryOut
+      ? {
+          retryability: retryOut.retryability,
+          routing_implication: retryOut.routing_implication,
+          likely_resolution: retryOut.likely_resolution,
+          customer_friction: retryOut.customer_friction,
+        }
+      : {}),
   };
 
   await db.final.upsert({

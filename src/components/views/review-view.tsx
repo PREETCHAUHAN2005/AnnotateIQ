@@ -36,16 +36,40 @@ import {
   Layers,
   Activity,
   Share2,
+  Timer,
+  Route,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RISK_LABELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 const ACTIONS = ["ALLOW", "REVIEW", "STEP_UP_VERIFICATION", "HOLD", "REJECT"] as const;
+const FAILURE_REASONS = [
+  "insufficient_funds",
+  "issuer_decline",
+  "technical_failure",
+  "authentication_failure",
+  "network_failure",
+  "timeout",
+  "bank_downtime",
+  "configuration",
+  "unknown",
+] as const;
+const RETRYABILITY = [
+  "do_not_retry",
+  "retry_same_rail",
+  "retry_alternate_route",
+  "retry_later",
+  "retry_with_step_up",
+  "contact_issuer",
+  "unknown",
+] as const;
 const AGENT_ORDER = [
   "transaction_risk",
   "behavioral",
   "device_network",
   "merchant_order",
+  "failure_classifier",
+  "retry_routing",
   "fraud_reasoning",
   "adjudicator",
   "ring_analyst",
@@ -260,6 +284,18 @@ export function ReviewView({ job }: { job: Job }) {
                           {it.payload.recommended_action}
                         </span>
                       </div>
+                      {it.payload.failure_reason && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-[9px] font-mono">
+                            {it.payload.failure_reason}
+                          </Badge>
+                          {it.payload.retryability && (
+                            <Badge variant="outline" className="text-[9px] font-mono">
+                              {it.payload.retryability}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                       {it.payload.risk_cluster_id && (
                         <div className="mt-1">
                           <Badge variant="outline" className="gap-1 text-[9px] font-mono border-foreground/25">
@@ -352,6 +388,7 @@ export function ReviewView({ job }: { job: Job }) {
                       payload={editMode && edited ? edited : current.payload}
                       editable={editMode}
                       onChange={editMode ? setEdited : undefined}
+                      jobKind={job.kind}
                     />
                     {editMode && (
                       <div className="space-y-1">
@@ -446,6 +483,8 @@ function draftKey(agent: string, p: Record<string, unknown>): string {
   if (agent === "fraud_reasoning") return `${p.risk_label}:${p.recommended_action}`;
   if (agent === "adjudicator") return `${p.consensus}:${p.final_label}`;
   if (agent === "ring_analyst") return `${p.network_risk}:${p.risk_cluster_id ?? "none"}`;
+  if (agent === "failure_classifier") return `${p.failure_reason}:${p.failure_severity}`;
+  if (agent === "retry_routing") return `${p.retryability}:${p.routing_implication}`;
   return JSON.stringify(p);
 }
 
@@ -462,6 +501,8 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
     fraud_reasoning: Bot,
     adjudicator: ShieldCheck,
     ring_analyst: Share2,
+    failure_classifier: Timer,
+    retry_routing: Route,
   }[agent] ?? Bot;
   const Icon = icon;
 
@@ -518,6 +559,16 @@ function DraftGroup({ agent, drafts }: { agent: string; drafts: Draft[] }) {
                     )}
                   </div>
                 )}
+                {agent === "failure_classifier" && (
+                  <div>
+                    <span className="text-primary">{String(p.failure_reason)}</span> · {String(p.failure_severity)}
+                  </div>
+                )}
+                {agent === "retry_routing" && (
+                  <div>
+                    <span className="text-primary">{String(p.retryability)}</span> · {String(p.routing_implication)}
+                  </div>
+                )}
                 {agent === "ring_analyst" && (
                   <div>
                     network_risk <span className="text-primary">{String(p.network_risk)}</span>
@@ -549,12 +600,15 @@ function AnnotationForm({
   payload,
   editable,
   onChange,
+  jobKind,
 }: {
   payload: ReviewItem["payload"];
   editable: boolean;
   onChange?: (p: ReviewItem["payload"]) => void;
+  jobKind?: string;
 }) {
   const set = (patch: Partial<ReviewItem["payload"]>) => onChange?.({ ...payload, ...patch });
+  const showFailure = jobKind === "failure" || Boolean(payload.failure_reason);
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -597,6 +651,48 @@ function AnnotationForm({
           </Select>
         </div>
       </div>
+      {showFailure && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Failure reason</Label>
+            <Select
+              value={payload.failure_reason ?? "unknown"}
+              onValueChange={(v) => set({ failure_reason: v as ReviewItem["payload"]["failure_reason"] })}
+              disabled={!editable}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FAILURE_REASONS.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Retryability</Label>
+            <Select
+              value={payload.retryability ?? "unknown"}
+              onValueChange={(v) => set({ retryability: v as ReviewItem["payload"]["retryability"] })}
+              disabled={!editable}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RETRYABILITY.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">Explanation</Label>
         <Textarea

@@ -6,6 +6,11 @@ export const ACTIONS = taxonomy.actions as readonly string[];
 export const RISK_FACTORS = taxonomy.risk_factors as readonly string[];
 export const BEHAVIORAL_PATTERNS = taxonomy.behavioral_patterns as readonly string[];
 export const CHARGEBACK_LEVELS = taxonomy.chargeback_levels as readonly string[];
+export const FAILURE_REASONS = taxonomy.failure_reasons as readonly string[];
+export const RETRYABILITY = taxonomy.retryability as readonly string[];
+export const ROUTING_IMPLICATIONS = taxonomy.routing_implications as readonly string[];
+export const LIKELY_RESOLUTIONS = taxonomy.likely_resolutions as readonly string[];
+export const CUSTOMER_FRICTION = taxonomy.customer_friction as readonly string[];
 
 export const RiskLevel = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export type RiskLevel = z.infer<typeof RiskLevel>;
@@ -18,6 +23,53 @@ export const RecommendedAction = z.enum([
   "REJECT",
 ]);
 export type RecommendedAction = z.infer<typeof RecommendedAction>;
+
+export const FailureReason = z.enum([
+  "insufficient_funds",
+  "issuer_decline",
+  "technical_failure",
+  "authentication_failure",
+  "network_failure",
+  "timeout",
+  "bank_downtime",
+  "configuration",
+  "unknown",
+]);
+export type FailureReason = z.infer<typeof FailureReason>;
+
+export const Retryability = z.enum([
+  "do_not_retry",
+  "retry_same_rail",
+  "retry_alternate_route",
+  "retry_later",
+  "retry_with_step_up",
+  "contact_issuer",
+  "unknown",
+]);
+export type Retryability = z.infer<typeof Retryability>;
+
+export const RoutingImplication = z.enum([
+  "stay_on_rail",
+  "switch_acquirer",
+  "switch_method",
+  "step_up_auth",
+  "block_retry",
+  "unknown",
+]);
+export type RoutingImplication = z.infer<typeof RoutingImplication>;
+
+export const LikelyResolution = z.enum([
+  "customer_funds",
+  "retry_later",
+  "alternate_instrument",
+  "issuer_approval",
+  "merchant_config",
+  "none",
+]);
+export type LikelyResolution = z.infer<typeof LikelyResolution>;
+
+export const CustomerFriction = z.enum(["none", "low", "medium", "high"]);
+export type CustomerFriction = z.infer<typeof CustomerFriction>;
 
 export const Consensus = z.enum(["AGREED", "DISPUTED"]);
 export type Consensus = z.infer<typeof Consensus>;
@@ -53,6 +105,8 @@ export const CanonicalPaymentEvent = z.object({
   order_value: z.number().nullable().optional(),
   product_category: z.string().nullable().optional(),
   payment_status: z.string().nullable().optional(),
+  decline_code: z.string().nullable().optional(),
+  gateway_message: z.string().nullable().optional(),
 });
 export type CanonicalPaymentEvent = z.infer<typeof CanonicalPaymentEvent>;
 
@@ -119,6 +173,22 @@ export const RingAnalystOut = z.object({
 });
 export type RingAnalystOut = z.infer<typeof RingAnalystOut>;
 
+export const FailureClassifierOut = z.object({
+  failure_reason: FailureReason,
+  failure_severity: RiskLevel,
+  evidence: z.array(EvidenceItem).default([]),
+});
+export type FailureClassifierOut = z.infer<typeof FailureClassifierOut>;
+
+export const RetryRoutingOut = z.object({
+  retryability: Retryability,
+  routing_implication: RoutingImplication,
+  likely_resolution: LikelyResolution,
+  customer_friction: CustomerFriction,
+  evidence: z.array(EvidenceItem).default([]),
+});
+export type RetryRoutingOut = z.infer<typeof RetryRoutingOut>;
+
 export const UnitAnnotation = z.object({
   unit_id: z.string(),
   event: CanonicalPaymentEvent,
@@ -149,6 +219,12 @@ export const UnitAnnotation = z.object({
   shared_entities: z.array(z.string()).optional(),
   cluster_size: z.number().int().min(1).optional(),
   member_transaction_ids: z.array(z.string()).optional(),
+  failure_reason: FailureReason.optional(),
+  failure_severity: RiskLevel.optional(),
+  retryability: Retryability.optional(),
+  likely_resolution: LikelyResolution.optional(),
+  routing_implication: RoutingImplication.optional(),
+  customer_friction: CustomerFriction.optional(),
 });
 export type UnitAnnotation = z.infer<typeof UnitAnnotation>;
 
@@ -156,6 +232,8 @@ export const GoldRisk = z.object({
   risk_label: RiskLevel,
   recommended_action: RecommendedAction,
   risk_cluster_id: z.string().nullable().optional(),
+  failure_reason: FailureReason.optional(),
+  retryability: Retryability.optional(),
 });
 export type GoldRisk = z.infer<typeof GoldRisk>;
 
@@ -179,6 +257,12 @@ export function parseAdjudicator(raw: unknown): AdjudicatorOut {
 }
 export function parseRingAnalyst(raw: unknown): RingAnalystOut {
   return RingAnalystOut.parse(raw);
+}
+export function parseFailureClassifier(raw: unknown): FailureClassifierOut {
+  return FailureClassifierOut.parse(raw);
+}
+export function parseRetryRouting(raw: unknown): RetryRoutingOut {
+  return RetryRoutingOut.parse(raw);
 }
 
 export function parseTaxonomy(raw: unknown): TransactionRiskOut {

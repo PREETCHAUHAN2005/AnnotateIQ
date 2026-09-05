@@ -41,6 +41,8 @@ export function fromDummy(raw: unknown): Event {
     order_value: num(event.order_value),
     product_category: str(event.product_category),
     payment_status: str(event.payment_status),
+    decline_code: str(event.decline_code),
+    gateway_message: str(event.gateway_message),
   });
 }
 
@@ -78,6 +80,8 @@ export function fromIeeeCis(row: unknown): Event {
     order_value: amt,
     product_category: str(r.ProductCD) ?? str(r.product_category),
     payment_status: str(r.payment_status) ?? "unknown",
+    decline_code: str(r.decline_code),
+    gateway_message: str(r.gateway_message),
   });
 }
 

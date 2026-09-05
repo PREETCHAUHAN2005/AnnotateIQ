@@ -4,8 +4,11 @@ import type {
   CanonicalPaymentEvent,
   DerivedSignals,
   DeviceNetworkOut,
+  FailureClassifierOut,
+  FailureReason,
   FraudReasoningOut,
   MerchantOrderOut,
+  RetryRoutingOut,
   RingAnalystOut,
   RiskLevel,
   TransactionRiskOut,
@@ -234,5 +237,199 @@ export function heuristicRingAnalyst(assignment: RingAssignment): RingAnalystOut
     network_risk: assignment.network_risk,
     relationship_confidence: assignment.relationship_confidence,
     explanation: `${assignment.risk_cluster_id} links ${assignment.cluster_size} events (${members}) via ${assignment.shared_entities.join(", ") || "shared entities"}. Edges come from the job graph — not invented.`,
+  };
+}
+
+const CODE_REASON: Record<string, FailureReason> = {
+  "51": "insufficient_funds",
+  "116": "insufficient_funds",
+  "05": "issuer_decline",
+  "04": "issuer_decline",
+  "41": "issuer_decline",
+  "91": "timeout",
+  "96": "technical_failure",
+  "68": "timeout",
+  N7: "authentication_failure",
+  "1A": "authentication_failure",
+  "65": "authentication_failure",
+  "12": "configuration",
+  "30": "configuration",
+  "92": "network_failure",
+  "15": "network_failure",
+};
+
+const SEVERITY: Record<FailureReason, RiskLevel> = {
+  insufficient_funds: "MEDIUM",
+  issuer_decline: "HIGH",
+  technical_failure: "MEDIUM",
+  authentication_failure: "MEDIUM",
+  network_failure: "HIGH",
+  timeout: "HIGH",
+  bank_downtime: "HIGH",
+  configuration: "LOW",
+  unknown: "MEDIUM",
+};
+
+function classifyFailureReason(event: CanonicalPaymentEvent): FailureReason {
+  const code = (event.decline_code ?? "").trim().toUpperCase();
+  const msg = (event.gateway_message ?? "").toLowerCase();
+  if (/downtime|unavailable|bank down/.test(msg)) return "bank_downtime";
+  if (/insufficient|not sufficient|nsf/.test(msg)) return "insufficient_funds";
+  if (/3ds|authenticat|sca |step.?up|cvv/.test(msg)) return "authentication_failure";
+  if (/do not honor|stolen|pickup|pick up/.test(msg)) return "issuer_decline";
+  if (/unable to route|network/.test(msg)) return "network_failure";
+  if (/config|invalid transaction/.test(msg)) return "configuration";
+  if (/timeout|timed out|too late/.test(msg)) return "timeout";
+  if (/malfunction|system error|technical/.test(msg)) return "technical_failure";
+  return CODE_REASON[code] ?? "unknown";
+}
+
+export function heuristicFailureClassifier(event: CanonicalPaymentEvent): FailureClassifierOut {
+  const failure_reason = classifyFailureReason(event);
+  const code = event.decline_code ?? "none";
+  const msg = event.gateway_message ?? event.payment_status ?? "no gateway message";
+  return {
+    failure_reason,
+    failure_severity: SEVERITY[failure_reason],
+    evidence: [
+      {
+        feature: "decline_code",
+        observation: String(code),
+        impact: failure_reason === "unknown" ? "low" : "high",
+        agent: "failure_classifier",
+      },
+      {
+        feature: "gateway_message",
+        observation: String(msg),
+        impact: "medium",
+        agent: "failure_classifier",
+      },
+    ],
+  };
+}
+
+const RETRY_FOR_REASON: Record<
+  FailureReason,
+  Pick<RetryRoutingOut, "retryability" | "routing_implication" | "likely_resolution" | "customer_friction">
+> = {
+  insufficient_funds: {
+    retryability: "retry_later",
+    routing_implication: "stay_on_rail",
+    likely_resolution: "customer_funds",
+    customer_friction: "high",
+  },
+  issuer_decline: {
+    retryability: "do_not_retry",
+    routing_implication: "block_retry",
+    likely_resolution: "none",
+    customer_friction: "high",
+  },
+  technical_failure: {
+    retryability: "retry_later",
+    routing_implication: "stay_on_rail",
+    likely_resolution: "retry_later",
+    customer_friction: "low",
+  },
+  authentication_failure: {
+    retryability: "retry_with_step_up",
+    routing_implication: "step_up_auth",
+    likely_resolution: "issuer_approval",
+    customer_friction: "medium",
+  },
+  network_failure: {
+    retryability: "retry_alternate_route",
+    routing_implication: "switch_acquirer",
+    likely_resolution: "retry_later",
+    customer_friction: "low",
+  },
+  timeout: {
+    retryability: "retry_later",
+    routing_implication: "switch_acquirer",
+    likely_resolution: "retry_later",
+    customer_friction: "medium",
+  },
+  bank_downtime: {
+    retryability: "retry_later",
+    routing_implication: "switch_acquirer",
+    likely_resolution: "retry_later",
+    customer_friction: "medium",
+  },
+  configuration: {
+    retryability: "do_not_retry",
+    routing_implication: "stay_on_rail",
+    likely_resolution: "merchant_config",
+    customer_friction: "low",
+  },
+  unknown: {
+    retryability: "unknown",
+    routing_implication: "unknown",
+    likely_resolution: "none",
+    customer_friction: "medium",
+  },
+};
+
+export function heuristicRetryRouting(
+  event: CanonicalPaymentEvent,
+  failure_reason: FailureReason
+): RetryRoutingOut {
+  const mapped = RETRY_FOR_REASON[failure_reason];
+  return {
+    ...mapped,
+    evidence: [
+      {
+        feature: "failure_reason",
+        observation: failure_reason,
+        impact: mapped.retryability === "do_not_retry" ? "high" : "medium",
+        agent: "retry_routing",
+      },
+      {
+        feature: "decline_code",
+        observation: event.decline_code ?? "none",
+        impact: "low",
+        agent: "retry_routing",
+      },
+    ],
+  };
+}
+
+export function heuristicAdjudicatorFailure(
+  event: CanonicalPaymentEvent,
+  fail: FailureClassifierOut,
+  retry: RetryRoutingOut
+): { passed: boolean; failures: string[]; disputed: boolean; disagreement_reason: string | null } {
+  const failures: string[] = [];
+  if (!fail.failure_reason) failures.push("adjudicator: failure_reason missing");
+  if (!retry.retryability) failures.push("adjudicator: retryability missing");
+  if (!fail.evidence.length) failures.push("adjudicator: failure evidence missing");
+  if (!retry.evidence.length) failures.push("adjudicator: retry evidence missing");
+
+  const msg = (event.gateway_message ?? "").toLowerCase();
+  const code = (event.decline_code ?? "").toUpperCase();
+  let disputed = false;
+  let disagreement_reason: string | null = null;
+
+  const fundsCue = /insufficient|nsf/.test(msg) || code === "51" || code === "116";
+  const timeoutCue = /timeout|timed out|too late/.test(msg) || code === "91" || code === "68";
+  const authCue = /3ds|authenticat|sca |step.?up|cvv/.test(msg) || code === "N7" || code === "1A" || code === "65";
+
+  if (fail.failure_reason === "timeout" && fundsCue) {
+    disputed = true;
+    disagreement_reason = "failure_reason timeout contradicts insufficient-funds cues.";
+  } else if (fail.failure_reason === "insufficient_funds" && timeoutCue && !fundsCue) {
+    disputed = true;
+    disagreement_reason = "failure_reason insufficient_funds contradicts timeout cues.";
+  } else if (fail.failure_reason === "authentication_failure" && fundsCue && !authCue) {
+    disputed = true;
+    disagreement_reason = "failure_reason authentication_failure contradicts funds cues.";
+  } else if (fail.failure_reason === "issuer_decline" && (timeoutCue || fundsCue) && !/do not honor|stolen/.test(msg)) {
+    disputed = true;
+    disagreement_reason = "failure_reason issuer_decline contradicts timeout/funds cues.";
+  }
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    disputed,
+    disagreement_reason,
   };
 }

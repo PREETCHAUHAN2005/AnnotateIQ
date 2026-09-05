@@ -18,7 +18,13 @@ export async function GET(req: NextRequest) {
   const results = finals
     .map((f) => {
       const p = JSON.parse(f.payload) as {
-        event?: { transaction_id?: string; merchant_id?: string; amount?: number };
+        event?: {
+          transaction_id?: string;
+          merchant_id?: string;
+          amount?: number;
+          decline_code?: string;
+          gateway_message?: string;
+        };
         risk_label?: string;
         recommended_action?: string;
         risk_factors?: string[];
@@ -27,11 +33,15 @@ export async function GET(req: NextRequest) {
         risk_cluster_id?: string | null;
         shared_entities?: string[];
         member_transaction_ids?: string[];
+        failure_reason?: string;
+        retryability?: string;
       };
       const haystack = [
         p.event?.transaction_id,
         p.event?.merchant_id,
         p.event?.amount,
+        p.event?.decline_code,
+        p.event?.gateway_message,
         p.risk_label,
         p.recommended_action,
         (p.risk_factors ?? []).join(" "),
@@ -40,6 +50,8 @@ export async function GET(req: NextRequest) {
         p.risk_cluster_id,
         (p.shared_entities ?? []).join(" "),
         (p.member_transaction_ids ?? []).join(" "),
+        p.failure_reason,
+        p.retryability,
       ]
         .join(" ")
         .toLowerCase();
@@ -54,6 +66,8 @@ export async function GET(req: NextRequest) {
       if ((p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q))) matchedFields.push("risk_factors");
       if ((p.explanation ?? "").toLowerCase().includes(q)) matchedFields.push("explanation");
       if ((p.risk_cluster_id ?? "").toLowerCase().includes(q)) matchedFields.push("risk_cluster_id");
+      if ((p.failure_reason ?? "").toLowerCase().includes(q)) matchedFields.push("failure_reason");
+      if ((p.retryability ?? "").toLowerCase().includes(q)) matchedFields.push("retryability");
 
       return {
         finalId: f.id,

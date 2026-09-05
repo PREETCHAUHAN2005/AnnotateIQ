@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { FAILURE_BATCHES } from "@/lib/data/sample-failures";
 import { buildHoneypotPool, SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import {
   loadIeeeIngestSpecs,
@@ -40,14 +41,19 @@ export function segmentText(text: string): Segment[] {
 }
 
 export async function createJobFromSample(packId: string): Promise<string> {
-  const pack = SAMPLE_BATCHES.find((p) => p.id === packId) ?? SAMPLE_BATCHES[0];
+  const pack =
+    SAMPLE_BATCHES.find((p) => p.id === packId) ??
+    FAILURE_BATCHES.find((p) => p.id === packId) ??
+    SAMPLE_BATCHES[0];
+  const kind = pack.kind === "failure" ? "failure" : "risk";
   return createJobWithUnits(
     pack.filename,
     "sample",
     pack.units.map((u) => {
       const { gold, ...event } = u.event;
       return { seq: u.seq, event, gold };
-    })
+    }),
+    { kind }
   );
 }
 
@@ -84,16 +90,23 @@ type UnitSpec = {
   gold?: GoldRisk;
 };
 
-async function createJobWithUnits(filename: string, source: string, specs: UnitSpec[]): Promise<string> {
+async function createJobWithUnits(
+  filename: string,
+  source: string,
+  specs: UnitSpec[],
+  opts?: { kind?: "risk" | "failure" }
+): Promise<string> {
+  const kind = opts?.kind ?? "risk";
   const job = await db.job.create({
-    data: { filename, source, status: "extracting", unitCount: specs.length },
+    data: { filename, source, kind, status: "extracting", unitCount: specs.length },
   });
 
   const honeypots = buildHoneypotPool();
   const honeypotCount = Math.max(1, Math.floor(specs.length / 6));
   const honeypotSlots = new Set<number>();
   const nativeGoldIdx = specs.map((s, i) => (s.gold ? i : -1)).filter((i) => i >= 0);
-  const preferNative = source === "ieee" || (source === "paste" && nativeGoldIdx.length > 0);
+  const preferNative =
+    kind === "failure" || source === "ieee" || (source === "paste" && nativeGoldIdx.length > 0);
   const pool = preferNative && nativeGoldIdx.length ? nativeGoldIdx : specs.map((_, i) => i);
   while (honeypotSlots.size < honeypotCount && honeypotSlots.size < pool.length) {
     honeypotSlots.add(pool[Math.floor(Math.random() * pool.length)]);

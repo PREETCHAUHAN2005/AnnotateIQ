@@ -1,30 +1,41 @@
 import { structuredComplete } from "@/lib/llm";
 import {
+  FAILURE_REASONS,
   parseAdjudicator,
   parseBehavioral,
   parseDeviceNetwork,
+  parseFailureClassifier,
   parseFraudReasoning,
   parseMerchantOrder,
+  parseRetryRouting,
   parseRingAnalyst,
   parseTransactionRisk,
+  RETRYABILITY,
   RISK_FACTORS,
+  ROUTING_IMPLICATIONS,
   type AdjudicatorOut,
   type BehavioralOut,
   type CanonicalPaymentEvent,
   type DerivedSignals,
   type DeviceNetworkOut,
+  type FailureClassifierOut,
+  type FailureReason,
   type FraudReasoningOut,
   type MerchantOrderOut,
+  type RetryRoutingOut,
   type RingAnalystOut,
   type RiskLevel,
   type TransactionRiskOut,
 } from "@/lib/schemas";
 import {
   heuristicAdjudicator,
+  heuristicAdjudicatorFailure,
   heuristicBehavioral,
   heuristicDeviceNetwork,
+  heuristicFailureClassifier,
   heuristicFraudReasoning,
   heuristicMerchantOrder,
+  heuristicRetryRouting,
   heuristicRingAnalyst,
   heuristicTransactionRisk,
 } from "@/lib/heuristics";
@@ -141,21 +152,30 @@ export async function runAdjudicator(
     recommended_action: string;
     explanation: string;
     risk_factors: string[];
-  }
+  },
+  failure?: { failure_reason: string; retryability: string }
 ): Promise<{ value: AdjudicatorOut | null; raw: string; latencyMs: number }> {
+  const failureChecks = failure
+    ? `
+5. failure_reason must be one of: ${FAILURE_REASONS.join(" | ")}
+6. retryability must be one of: ${RETRYABILITY.join(" | ")}
+7. If gateway_message or decline_code clearly contradicts failure_reason, consensus MUST be DISPUTED`
+    : "";
   const sys = `You are the Adjudicator. Judge only. Never invent a new transaction.
 Checks:
 1. risk_label is LOW|MEDIUM|HIGH|CRITICAL
 2. recommended_action is ALLOW|REVIEW|STEP_UP_VERIFICATION|HOLD|REJECT
 3. explanation cites at least one real feature from the event
-4. If specialists include both LOW and HIGH/CRITICAL, consensus MUST be DISPUTED
+4. If specialists include both LOW and HIGH/CRITICAL, consensus MUST be DISPUTED${failureChecks}
 
 Return STRICT JSON:
 {"passed":true,"failures":[],"consensus":"AGREED","final_label":"HIGH","recommended_action":"STEP_UP_VERIFICATION","disagreement_reason":null}`;
   const user = `${eventBlock(unit.event, unit.derived)}
 
 Specialists: ${JSON.stringify(specialists)}
-Merged proposal: ${JSON.stringify(merged)}`;
+Merged proposal: ${JSON.stringify(merged)}${
+    failure ? `\nFailure proposal: ${JSON.stringify(failure)}` : ""
+  }`;
   return structuredComplete(sys, user, parseAdjudicator, { temperature: 0 });
 }
 
@@ -205,4 +225,50 @@ ${JSON.stringify(assignment)}`;
 
 export function fallbackRingAnalyst(assignment: RingAssignment) {
   return heuristicRingAnalyst(assignment);
+}
+
+export async function runFailureClassifier(
+  unit: UnitInput
+): Promise<{ value: FailureClassifierOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Failure Classifier. Judge only decline/timeout evidence. Do not set retryability.
+- "failure_reason": ${FAILURE_REASONS.join(" | ")}
+- "failure_severity": LOW | MEDIUM | HIGH | CRITICAL
+- "evidence": {feature, observation, impact}[] citing decline_code and/or gateway_message
+
+Return STRICT JSON.`;
+  return structuredComplete(sys, eventBlock(unit.event, unit.derived), parseFailureClassifier, {
+    temperature: 0,
+  });
+}
+
+export async function runRetryRouting(
+  unit: UnitInput,
+  failure_reason: FailureReason
+): Promise<{ value: RetryRoutingOut | null; raw: string; latencyMs: number }> {
+  const sys = `You are the Retry / Routing Analyst. Judge only retryability and routing. Do not invent a new failure_reason.
+- "retryability": ${RETRYABILITY.join(" | ")}
+- "routing_implication": ${ROUTING_IMPLICATIONS.join(" | ")}
+- "likely_resolution": customer_funds | retry_later | alternate_instrument | issuer_approval | merchant_config | none
+- "customer_friction": none | low | medium | high
+- "evidence": {feature, observation, impact}[]
+
+Return STRICT JSON.`;
+  const user = `${eventBlock(unit.event, unit.derived)}
+
+Classified failure_reason (do not override): ${failure_reason}`;
+  return structuredComplete(sys, user, parseRetryRouting, { temperature: 0 });
+}
+
+export function fallbackFailureClassifier(event: CanonicalPaymentEvent) {
+  return heuristicFailureClassifier(event);
+}
+export function fallbackRetryRouting(event: CanonicalPaymentEvent, failure_reason: FailureReason) {
+  return heuristicRetryRouting(event, failure_reason);
+}
+export function fallbackAdjudicatorFailure(
+  event: CanonicalPaymentEvent,
+  fail: FailureClassifierOut,
+  retry: RetryRoutingOut
+) {
+  return heuristicAdjudicatorFailure(event, fail, retry);
 }

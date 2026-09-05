@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createJobFromIeee, createJobFromSample, createJobFromText } from "@/lib/ingest";
+import { FAILURE_BATCHES } from "@/lib/data/sample-failures";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { getIeeeDatasetInfo } from "@/lib/ieee";
 
@@ -18,7 +19,10 @@ export async function POST(req: NextRequest) {
     let jobId: string;
 
     if (body.mode === "sample") {
-      const pack = SAMPLE_BATCHES.find((p) => p.id === body.packId) ?? SAMPLE_BATCHES[0];
+      const pack =
+        SAMPLE_BATCHES.find((p) => p.id === body.packId) ??
+        FAILURE_BATCHES.find((p) => p.id === body.packId) ??
+        SAMPLE_BATCHES[0];
       jobId = await createJobFromSample(pack.id);
     } else if (body.mode === "paste") {
       const text = String(body.text ?? "");

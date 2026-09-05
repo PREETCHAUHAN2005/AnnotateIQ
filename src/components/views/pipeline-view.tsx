@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   RotateCcw,
   Share2,
+  Timer,
+  Route,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -314,7 +316,9 @@ export function PipelineView({
             <Cpu className="h-4 w-4 text-primary" /> Agent fan-out
           </CardTitle>
           <CardDescription>
-            Four specialists in parallel, then fraud reasoning (k=3), an adjudicator, and a job-scoped ring analyst.
+            {job.kind === "failure"
+              ? "Four risk specialists, then FailureClassifier + RetryRoutingAnalyst, fraud reasoning (k=3), adjudicator (failure rubric), and ring."
+              : "Four specialists in parallel, then fraud reasoning (k=3), an adjudicator, and a job-scoped ring analyst."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -333,8 +337,15 @@ export function PipelineView({
               <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 lg:rotate-0" />
             </div>
             {/* Agents */}
-            <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {AGENT_NODES.map((n) => {
+            <div className={cn("flex-1 grid gap-3", job.kind === "failure" ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 lg:grid-cols-4")}>
+              {(job.kind === "failure"
+                ? [
+                    ...AGENT_NODES,
+                    { id: "failure_classifier", label: "Failure", sub: "×1 · reason", icon: Timer, tone: "rose" as const },
+                    { id: "retry_routing", label: "Retry", sub: "×1 · route", icon: Route, tone: "amber" as const },
+                  ]
+                : AGENT_NODES
+              ).map((n) => {
                 const active = (activeAgents[n.id] ?? 0) > 0;
                 const count = totalAgents[n.id] ?? 0;
                 return (
@@ -498,11 +509,13 @@ export function PipelineView({
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">Agent calls per unit</span>
-                  <span className="font-mono font-bold">4 + 3 + adj + ring</span>
+                  <span className="font-mono font-bold">
+                    {job.kind === "failure" ? "4 + fail + retry + 3 + adj + ring" : "4 + 3 + adj + ring"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                   <span className="text-muted-foreground">Total agent calls</span>
-                  <span className="font-mono font-bold">{job.unitCount * 9}</span>
+                  <span className="font-mono font-bold">{job.unitCount * (job.kind === "failure" ? 11 : 9)}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/20">
                   <span className="text-primary">Est. time</span>
@@ -510,7 +523,9 @@ export function PipelineView({
                 </div>
               </div>
               <div className="text-xs text-muted-foreground leading-relaxed">
-                Four specialists run in parallel, then fraud reasoning (k=3), the adjudicator, and a job-scoped ring analyst. Route is ≥0.85 → auto, DISPUTED or lower confidence → human.
+                {job.kind === "failure"
+                  ? "Failure jobs add FailureClassifier and RetryRoutingAnalyst. Critical fields are failure_reason and retryability. Route is ≥0.85 → auto, DISPUTED or lower confidence → human."
+                  : "Four specialists run in parallel, then fraud reasoning (k=3), the adjudicator, and a job-scoped ring analyst. Route is ≥0.85 → auto, DISPUTED or lower confidence → human."}
               </div>
               <div className="flex gap-2 justify-end pt-2 border-t border-border/60">
                 <Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
@@ -539,7 +554,7 @@ function DiagramNode({
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   sub: string;
-  tone: "emerald" | "teal" | "violet" | "amber" | "muted";
+  tone: "emerald" | "teal" | "violet" | "amber" | "rose" | "muted";
   active: boolean;
   count: number | undefined;
 }) {
@@ -548,6 +563,7 @@ function DiagramNode({
     teal: "border-foreground/20 text-foreground/80 bg-foreground/5",
     violet: "border-foreground/20 text-foreground/70 bg-foreground/5",
     amber: "border-foreground/20 text-foreground/60 bg-foreground/5",
+    rose: "border-rose-500/40 text-rose-400 bg-rose-500/5",
     muted: "border-border/60 text-muted-foreground bg-muted/30",
   }[tone];
   return (

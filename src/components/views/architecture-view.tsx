@@ -19,6 +19,8 @@ import {
   Code2,
   Share2,
   X,
+  Timer,
+  Route,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +34,7 @@ type AgentInfo = {
   owns: string[];
   description: string;
   promptSnippet: string;
+  layer?: "risk" | "failure";
 };
 
 const AGENTS: AgentInfo[] = [
@@ -131,6 +134,36 @@ Return {"passed":true,"failures":[],"consensus":"AGREED","final_label":"HIGH",..
 - "relationship_confidence": 0..1
 - "explanation": 1-2 sentences citing shared_entities already in the packet`,
   },
+  {
+    id: "failure_classifier",
+    name: "FailureClassifier",
+    icon: Timer,
+    tone: "rose",
+    samples: 1,
+    temperature: 0,
+    layer: "failure",
+    owns: ["failure_reason", "failure_severity", "evidence"],
+    description:
+      "Failure jobs only. Owns failure_reason and failure_severity from decline_code / gateway_message. Does not set retryability.",
+    promptSnippet: `You are the Failure Classifier. Judge only decline/timeout evidence. Do not set retryability.
+- "failure_reason": insufficient_funds | issuer_decline | timeout | …
+- "failure_severity": LOW | MEDIUM | HIGH | CRITICAL`,
+  },
+  {
+    id: "retry_routing",
+    name: "RetryRoutingAnalyst",
+    icon: Route,
+    tone: "amber",
+    samples: 1,
+    temperature: 0,
+    layer: "failure",
+    owns: ["retryability", "routing_implication", "likely_resolution", "customer_friction"],
+    description:
+      "Failure jobs only. Owns retryability and routing_implication. Does not invent a new failure_reason. Not a live gateway router.",
+    promptSnippet: `You are the Retry / Routing Analyst. Judge only retryability and routing. Do not invent a new failure_reason.
+- "retryability": do_not_retry | retry_later | retry_with_step_up | …
+- "routing_implication": stay_on_rail | switch_acquirer | step_up_auth | block_retry`,
+  },
 ];
 
 const toneClasses = {
@@ -151,7 +184,8 @@ export function ArchitectureView() {
           <Cpu className="h-6 w-6 text-primary" /> Agent Architecture
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Seven agents: four specialists, fraud reasoning, an adjudicator, and a job-scoped ring layer. The graph is deterministic — RingAnalyst judges it, and does not invent edges.
+          Nine agents. Risk jobs run seven. Failure jobs add FailureClassifier and RetryRoutingAnalyst (~2 extra LLM
+          calls). Chargeback stays a field, not a fourth job type. The ring graph is still job-scoped and deterministic.
         </p>
       </div>
 
@@ -182,7 +216,9 @@ export function ArchitectureView() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pipeline data flow</CardTitle>
-          <CardDescription>Specialists → fraud reasoning → adjudicator → ring analyst → route</CardDescription>
+          <CardDescription>
+            Specialists → (failure layer on kind=failure) → fraud reasoning → adjudicator → ring analyst → route
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col lg:flex-row items-stretch gap-3">
@@ -207,6 +243,9 @@ export function ArchitectureView() {
                     >
                       <Icon className={cn("h-5 w-5 mx-auto mb-1.5", tc.text)} />
                       <div className="text-xs font-semibold truncate">{agent.name}</div>
+                      {agent.layer === "failure" && (
+                        <div className="text-[9px] text-muted-foreground mt-0.5">failure jobs</div>
+                      )}
                       <div className="flex items-center justify-center gap-1 mt-1">
                         <Badge variant="outline" className="text-[9px] px-1 py-0 gap-0.5">
                           <Hash className="h-2 w-2" />×{agent.samples}
@@ -255,6 +294,9 @@ export function ArchitectureView() {
                       <Badge variant="outline" className="text-[9px] gap-0.5">
                         <Thermometer className="h-2.5 w-2.5" />T={agent.temperature}
                       </Badge>
+                      {agent.layer === "failure" ? (
+                        <Badge variant="outline" className="text-[9px]">failure jobs</Badge>
+                      ) : null}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{agent.description}</p>
                     <div className="flex flex-wrap gap-1 mt-2">

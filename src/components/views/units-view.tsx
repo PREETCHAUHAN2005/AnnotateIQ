@@ -85,7 +85,9 @@ export function UnitsView({ job }: { job: Job }) {
           (p.explanation ?? "").toLowerCase().includes(q) ||
           (p.risk_factors ?? []).some((c) => c.toLowerCase().includes(q)) ||
           (p.risk_cluster_id ?? "").toLowerCase().includes(q) ||
-          (p.member_transaction_ids ?? []).some((id) => id.toLowerCase().includes(q))
+          (p.member_transaction_ids ?? []).some((id) => id.toLowerCase().includes(q)) ||
+          (p.failure_reason ?? "").toLowerCase().includes(q) ||
+          (p.retryability ?? "").toLowerCase().includes(q)
         );
       });
     }
@@ -276,6 +278,16 @@ export function UnitsView({ job }: { job: Job }) {
                           {eventLine(f.payload)}
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
+                          {f.payload.failure_reason && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                              {f.payload.failure_reason}
+                            </span>
+                          )}
+                          {f.payload.retryability && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                              {f.payload.retryability}
+                            </span>
+                          )}
                           {f.payload.risk_cluster_id && (
                             <ClusterChip id={f.payload.risk_cluster_id} size={f.payload.cluster_size} />
                           )}
@@ -367,6 +379,8 @@ export function UnitsView({ job }: { job: Job }) {
                     label="Cluster size"
                     value={selected.payload.cluster_size != null ? String(selected.payload.cluster_size) : "1"}
                   />
+                  <DetailItem label="Failure reason" value={selected.payload.failure_reason ?? "—"} />
+                  <DetailItem label="Retryability" value={selected.payload.retryability ?? "—"} />
                 </div>
 
                 {selected.payload.risk_cluster_id && (

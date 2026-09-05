@@ -27,6 +27,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       risk_label?: string;
       recommended_action?: string;
       risk_cluster_id?: string | null;
+      failure_reason?: string;
+      retryability?: string;
     };
     const reasonDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
     for (const d of reasonDrafts) {
@@ -40,6 +42,34 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
           predicted: p.recommended_action,
           gold: gold.recommended_action,
         });
+    }
+    if (gold.failure_reason) {
+      const failDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "failure_classifier" && d.attempt === 1);
+      for (const d of failDrafts) {
+        const p = JSON.parse(d.payload) as { failure_reason?: string };
+        if (p.failure_reason) {
+          comparisons.push({
+            agent: "failure_classifier",
+            field: "failure_reason",
+            predicted: p.failure_reason,
+            gold: gold.failure_reason,
+          });
+        }
+      }
+    }
+    if (gold.retryability) {
+      const retryDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "retry_routing" && d.attempt === 1);
+      for (const d of retryDrafts) {
+        const p = JSON.parse(d.payload) as { retryability?: string };
+        if (p.retryability) {
+          comparisons.push({
+            agent: "retry_routing",
+            field: "retryability",
+            predicted: p.retryability,
+            gold: gold.retryability,
+          });
+        }
+      }
     }
     if (gold.risk_cluster_id) {
       const ringDrafts = drafts.filter((d) => d.unitId === u.id && d.agent === "ring_analyst" && d.attempt === 1);
@@ -152,6 +182,8 @@ function computeLatency(drafts: { agent: string; latencyMs: number | null; attem
     "fraud_reasoning",
     "adjudicator",
     "ring_analyst",
+    "failure_classifier",
+    "retry_routing",
   ];
   const out: Record<string, { avg: number; min: number; max: number; count: number; p95: number }> = {};
   for (const agent of agents) {

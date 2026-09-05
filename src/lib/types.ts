@@ -2,10 +2,13 @@
 
 export type JobStatus = "pending" | "extracting" | "labeling" | "review" | "done" | "failed";
 
+export type JobKind = "risk" | "failure";
+
 export type Job = {
   id: string;
   filename: string;
   source: string;
+  kind?: JobKind;
   status: JobStatus;
   unitCount: number;
   autoCount: number;
@@ -72,6 +75,8 @@ export type CanonicalPaymentEvent = {
   order_value?: number | null;
   product_category?: string | null;
   payment_status?: string | null;
+  decline_code?: string | null;
+  gateway_message?: string | null;
 };
 
 export type DerivedSignals = {
@@ -113,7 +118,51 @@ export type UnitAnnotation = {
   shared_entities?: string[];
   cluster_size?: number;
   member_transaction_ids?: string[];
+  failure_reason?: FailureReason;
+  failure_severity?: RiskLevel;
+  retryability?: Retryability;
+  likely_resolution?: LikelyResolution;
+  routing_implication?: RoutingImplication;
+  customer_friction?: CustomerFriction;
 };
+
+export type FailureReason =
+  | "insufficient_funds"
+  | "issuer_decline"
+  | "technical_failure"
+  | "authentication_failure"
+  | "network_failure"
+  | "timeout"
+  | "bank_downtime"
+  | "configuration"
+  | "unknown";
+
+export type Retryability =
+  | "do_not_retry"
+  | "retry_same_rail"
+  | "retry_alternate_route"
+  | "retry_later"
+  | "retry_with_step_up"
+  | "contact_issuer"
+  | "unknown";
+
+export type RoutingImplication =
+  | "stay_on_rail"
+  | "switch_acquirer"
+  | "switch_method"
+  | "step_up_auth"
+  | "block_retry"
+  | "unknown";
+
+export type LikelyResolution =
+  | "customer_funds"
+  | "retry_later"
+  | "alternate_instrument"
+  | "issuer_approval"
+  | "merchant_config"
+  | "none";
+
+export type CustomerFriction = "none" | "low" | "medium" | "high";
 
 export type AgentName =
   | "transaction_risk"
@@ -122,7 +171,9 @@ export type AgentName =
   | "merchant_order"
   | "fraud_reasoning"
   | "adjudicator"
-  | "ring_analyst";
+  | "ring_analyst"
+  | "failure_classifier"
+  | "retry_routing";
 
 export type Draft = {
   id: string;

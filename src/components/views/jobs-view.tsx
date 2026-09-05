@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { IeeeDatasetInfo, Job } from "@/lib/types";
 import { api } from "@/lib/api";
 import { IEEE_COLUMN_MAP } from "@/lib/data/ieee-columns";
+import { FAILURE_BATCHES } from "@/lib/data/sample-failures";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FileText, Play, FileUp, ScanLine, ShieldAlert, Loader2, Trash2, Database } from "lucide-react";
+import { FileText, Play, FileUp, ScanLine, ShieldAlert, Loader2, Trash2, Database, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function JobsView({
@@ -84,8 +85,9 @@ export function JobsView({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Jobs & ingest</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Create a batch from synthetic payment packs, paste or upload JSON/CSV, or load an IEEE-CIS-shaped
-          fixture. Public/synthetic data only — not Razorpay production transactions. This app never downloads Kaggle.
+          Create a risk or payment-failure batch from synthetic packs, paste or upload JSON/CSV, or load an
+          IEEE-CIS-shaped fixture. Public/synthetic data only — not Razorpay production transactions. This app never
+          downloads Kaggle.
         </p>
       </div>
 
@@ -96,6 +98,9 @@ export function JobsView({
           </TabsTrigger>
           <TabsTrigger value="paste" className="gap-2">
             <FileUp className="h-4 w-4" /> Paste / upload
+          </TabsTrigger>
+          <TabsTrigger value="failure" className="gap-2">
+            <Timer className="h-4 w-4" /> Failure packs
           </TabsTrigger>
           <TabsTrigger value="ieee" className="gap-2">
             <Database className="h-4 w-4" /> IEEE-CIS
@@ -130,6 +135,34 @@ export function JobsView({
                 </Card>
               );
             })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="failure" className="mt-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {FAILURE_BATCHES.map((p) => (
+              <Card key={p.id} className="border-border/60 hover:border-primary/40 transition group">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2.5 group-hover:bg-primary/20 transition">
+                      <Timer className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{p.filename}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{p.description}</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-[10px]">{p.kind}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{p.units.length} events</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <Button className="w-full mt-4 gap-2" onClick={() => createSample(p.id)} disabled={creating}>
+                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                    Create job
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
 
@@ -314,7 +347,8 @@ function JobRow({
         <div className="min-w-0">
           <div className="font-medium text-sm truncate">{job.filename}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {job.unitCount} events · {job.autoCount} auto · {job.humanCount} human · {job.reviewedCount} reviewed
+            {job.kind === "failure" ? "failure" : "risk"} · {job.unitCount} events · {job.autoCount} auto ·{" "}
+            {job.humanCount} human · {job.reviewedCount} reviewed
           </div>
         </div>
       </button>

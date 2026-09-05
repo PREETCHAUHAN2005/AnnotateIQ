@@ -65,6 +65,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       "risk_cluster_id",
       "network_risk",
       "cluster_size",
+      "failure_reason",
+      "failure_severity",
+      "retryability",
+      "routing_implication",
+      "likely_resolution",
+      "customer_friction",
+      "evidence_count",
     ];
     const escape = (v: unknown) => {
       const s = String(v ?? "");

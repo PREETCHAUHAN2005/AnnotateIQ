@@ -132,6 +132,10 @@ export function ExportView({ job }: { job: Job }) {
               { field: "cluster_size", type: "int", desc: "events sharing the ring" },
               { field: "shared_entities", type: "string[]", desc: "device / ip / customers" },
               { field: "member_transaction_ids", type: "string[]", desc: "txn ids in the cluster" },
+              { field: "failure_reason", type: "enum?", desc: "timeout | issuer_decline | … (failure jobs)" },
+              { field: "retryability", type: "enum?", desc: "retry_later | do_not_retry | …" },
+              { field: "failure_severity", type: "enum?", desc: "LOW | MEDIUM | HIGH | CRITICAL" },
+              { field: "routing_implication", type: "enum?", desc: "stay_on_rail | switch_acquirer | …" },
             ].map((f) => (
               <div key={f.field} className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
                 <div className="flex items-center gap-2">

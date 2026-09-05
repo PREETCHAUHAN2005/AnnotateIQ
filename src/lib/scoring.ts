@@ -1,21 +1,18 @@
 export const K = 3;
 export const CRITICAL_FIELDS = ["risk_label", "recommended_action"] as const;
+export const FAILURE_CRITICAL_FIELDS = ["failure_reason", "retryability"] as const;
 export const THRESHOLD = 0.85;
 export const MAX_ATTEMPTS = 2;
 export const CONCURRENCY = 2;
 
-type CriticalField = (typeof CRITICAL_FIELDS)[number];
-
 export function score(
-  samples: { risk_label: string[]; recommended_action: string[] },
+  samples: Record<string, string[]>,
   criticPassed: boolean,
-  disputed = false
+  disputed = false,
+  fields: readonly string[] = CRITICAL_FIELDS
 ): { confidence: number; agreement: number } {
-  const fieldConf: Record<CriticalField, number> = {
-    risk_label: modalAgreement(samples.risk_label),
-    recommended_action: modalAgreement(samples.recommended_action),
-  };
-  const agreement = Math.min(fieldConf.risk_label, fieldConf.recommended_action);
+  const fieldConf = fields.map((f) => modalAgreement(samples[f] ?? []));
+  const agreement = fieldConf.length ? Math.min(...fieldConf) : 0;
   let confidence = agreement * (criticPassed ? 1.0 : 0.6);
   if (disputed) confidence *= 0.7;
   return { confidence, agreement };

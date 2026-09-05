@@ -27,7 +27,7 @@ export async function GET() {
       pendingUnits,
       labeledUnits,
       reviewedUnits: units.filter((u) => u.status === "reviewed").length,
-      agentsAvailable: 7,
+      agentsAvailable: 9,
       dbConnected: true,
     });
   } catch {

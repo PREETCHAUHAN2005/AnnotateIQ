@@ -1,6 +1,6 @@
 {
   "domain": "payment_risk",
-  "version": 2,
+  "version": 3,
   "risk_labels": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
   "actions": ["ALLOW", "REVIEW", "STEP_UP_VERIFICATION", "HOLD", "REJECT"],
   "risk_factors": [
@@ -21,5 +21,43 @@
     "REPEAT_FAILURE",
     "DORMANT_WAKE"
   ],
-  "chargeback_levels": ["LOW", "MEDIUM", "HIGH"]
+  "chargeback_levels": ["LOW", "MEDIUM", "HIGH"],
+  "failure_reasons": [
+    "insufficient_funds",
+    "issuer_decline",
+    "technical_failure",
+    "authentication_failure",
+    "network_failure",
+    "timeout",
+    "bank_downtime",
+    "configuration",
+    "unknown"
+  ],
+  "failure_severities": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+  "retryability": [
+    "do_not_retry",
+    "retry_same_rail",
+    "retry_alternate_route",
+    "retry_later",
+    "retry_with_step_up",
+    "contact_issuer",
+    "unknown"
+  ],
+  "routing_implications": [
+    "stay_on_rail",
+    "switch_acquirer",
+    "switch_method",
+    "step_up_auth",
+    "block_retry",
+    "unknown"
+  ],
+  "likely_resolutions": [
+    "customer_funds",
+    "retry_later",
+    "alternate_instrument",
+    "issuer_approval",
+    "merchant_config",
+    "none"
+  ],
+  "customer_friction": ["none", "low", "medium", "high"]
 }
