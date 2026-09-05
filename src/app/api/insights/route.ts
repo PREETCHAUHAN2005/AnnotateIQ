@@ -5,8 +5,11 @@ import { fleissKappa } from "@/lib/scoring";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const INSIGHTS_JOB_CAP = 20;
+
 export async function GET() {
-  const jobs = await db.job.findMany({ orderBy: { createdAt: "asc" } });
+  const recent = await db.job.findMany({ orderBy: { createdAt: "desc" }, take: INSIGHTS_JOB_CAP });
+  const jobs = [...recent].reverse();
   const jobTrends = [];
   let cumulativeUnits = 0;
   let cumulativeAuto = 0;
@@ -30,7 +33,17 @@ export async function GET() {
     const labelRatings: string[][] = [];
     for (const u of units) {
       const rows = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
-      if (rows.length >= 2) labelRatings.push(rows.map((d) => (JSON.parse(d.payload) as { risk_label: string }).risk_label));
+      if (rows.length >= 2) {
+        labelRatings.push(
+          rows.map((d) => {
+            try {
+              return (JSON.parse(d.payload) as { risk_label: string }).risk_label;
+            } catch {
+              return "LOW";
+            }
+          })
+        );
+      }
     }
 
     const hoursSaved = Math.max(0, (finals.length * 4 - human * 1) / 60);
@@ -59,7 +72,9 @@ export async function GET() {
     });
   }
 
-  const allFinals = await db.final.findMany({});
+  const allFinals = jobs.length
+    ? await db.final.findMany({ where: { jobId: { in: jobs.map((j) => j.id) } } })
+    : [];
   const riskDist: Record<string, number> = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
   const actionDist: Record<string, number> = {
     ALLOW: 0,
@@ -70,10 +85,14 @@ export async function GET() {
   };
   const consDist: Record<string, number> = { AGREED: 0, DISPUTED: 0 };
   for (const f of allFinals) {
-    const p = JSON.parse(f.payload) as { risk_label?: string; recommended_action?: string; consensus?: string };
-    riskDist[p.risk_label ?? "LOW"] = (riskDist[p.risk_label ?? "LOW"] ?? 0) + 1;
-    actionDist[p.recommended_action ?? "REVIEW"] = (actionDist[p.recommended_action ?? "REVIEW"] ?? 0) + 1;
-    consDist[p.consensus ?? "AGREED"] = (consDist[p.consensus ?? "AGREED"] ?? 0) + 1;
+    try {
+      const p = JSON.parse(f.payload) as { risk_label?: string; recommended_action?: string; consensus?: string };
+      riskDist[p.risk_label ?? "LOW"] = (riskDist[p.risk_label ?? "LOW"] ?? 0) + 1;
+      actionDist[p.recommended_action ?? "REVIEW"] = (actionDist[p.recommended_action ?? "REVIEW"] ?? 0) + 1;
+      consDist[p.consensus ?? "AGREED"] = (consDist[p.consensus ?? "AGREED"] ?? 0) + 1;
+    } catch {
+      /* skip corrupt payload */
+    }
   }
 
   const totalFinals = allFinals.length;

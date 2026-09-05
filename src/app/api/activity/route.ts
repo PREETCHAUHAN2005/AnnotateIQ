@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { parsePositiveInt } from "@/lib/http-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const jobId = req.nextUrl.searchParams.get("jobId");
   const kind = req.nextUrl.searchParams.get("kind");
-  const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10);
+  const limit = parsePositiveInt(req.nextUrl.searchParams.get("limit"), 50);
 
   const where: Record<string, unknown> = {};
   if (jobId) where.jobId = jobId;
