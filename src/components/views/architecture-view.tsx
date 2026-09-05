@@ -209,6 +209,9 @@ export function ArchitectureView() {
               </div>
             ))}
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Events are synthetic or IEEE-CIS-shaped — Razorpay-shaped fields only. This demo does not call Razorpay APIs.
+          </p>
         </CardContent>
       </Card>
 
