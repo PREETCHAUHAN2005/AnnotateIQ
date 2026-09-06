@@ -24,6 +24,10 @@ type HealthStatus = {
   reviewedUnits: number;
   agentsAvailable: number;
   dbConnected: boolean;
+  skipLlm?: boolean;
+  predictionMode?: "deterministic_fallback" | "llm";
+  demoLabel?: string;
+  ephemeralSqlite?: boolean;
 };
 
 export function PipelineHealth() {
@@ -48,6 +52,9 @@ export function PipelineHealth() {
             reviewedUnits: 0,
             agentsAvailable: 0,
             dbConnected: false,
+            skipLlm: true,
+            predictionMode: "deterministic_fallback",
+            demoLabel: "Deterministic fallback demo",
           });
         }
       }
@@ -95,6 +102,11 @@ export function PipelineHealth() {
             {statusConfig.label}
           </Badge>
         </div>
+        {health.predictionMode === "deterministic_fallback" && (
+          <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+            Deterministic fallback demo — <code>SKIP_LLM=1</code>. Predictions are heuristics, not live LLM results.
+          </div>
+        )}
 
         <div className="grid grid-cols-4 gap-2">
           <HealthMetric

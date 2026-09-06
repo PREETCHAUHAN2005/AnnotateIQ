@@ -71,7 +71,7 @@ export function OverviewView({
               </div>
               {/* Feature pills */}
               <div className="mt-4 flex flex-wrap gap-2">
-                {["k=3 fraud reasoning", "adjudicator-gated", "job-scoped rings", "honeypot-verified", "weakest-link scoring"].map((pill) => (
+                {["k=3 fraud reasoning", "adjudicator-gated", "held-out P/R + FP cost", "honeypot-verified", "weakest-link scoring"].map((pill) => (
                   <span key={pill} className="text-[10px] font-mono px-2 py-1 rounded-full bg-primary/5 border border-primary/20 text-primary/80">
                     {pill}
                   </span>

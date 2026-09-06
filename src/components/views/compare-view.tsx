@@ -134,6 +134,9 @@ export function CompareView() {
                   <th className="text-right p-3 font-medium">Auto %</th>
                   <th className="text-right p-3 font-medium">Avg Conf</th>
                   <th className="text-right p-3 font-medium">κ Risk</th>
+                  <th className="text-right p-3 font-medium">Precision</th>
+                  <th className="text-right p-3 font-medium">Recall</th>
+                  <th className="text-right p-3 font-medium">FP ₹</th>
                   <th className="text-right p-3 font-medium">Honeypot</th>
                 </tr>
               </thead>
@@ -157,6 +160,17 @@ export function CompareView() {
                       <span className={cn("font-mono tabular-nums", j.kappaRisk.tone === "good" && "text-foreground", j.kappaRisk.tone === "warn" && "text-foreground/60", j.kappaRisk.tone === "bad" && "text-rose-400")}>
                         {j.kappaRisk.value.toFixed(3)}
                       </span>
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums">
+                      {j.heldOut && j.heldOut.n > 0 ? `${(j.heldOut.precision * 100).toFixed(0)}%` : "—"}
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums">
+                      {j.heldOut && j.heldOut.n > 0 ? `${(j.heldOut.recall * 100).toFixed(0)}%` : "—"}
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums">
+                      {j.heldOut && j.heldOut.n > 0
+                        ? new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(j.heldOut.fpCostInr)
+                        : "—"}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5 text-xs">

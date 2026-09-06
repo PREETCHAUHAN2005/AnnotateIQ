@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { parsePositiveInt } from "@/lib/http-guards";
+import { withDbJson } from "@/lib/route-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 // GET /api/activity — chronological event log across all jobs
 // Optional query params: ?jobId=xxx&kind=xxx&limit=50
 export async function GET(req: NextRequest) {
+  return withDbJson("[GET /api/activity]", async () => {
   const jobId = req.nextUrl.searchParams.get("jobId");
   const kind = req.nextUrl.searchParams.get("kind");
   const limit = parsePositiveInt(req.nextUrl.searchParams.get("limit"), 50);
@@ -60,9 +62,10 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, Math.min(limit, 100));
 
-  return NextResponse.json({
+  return {
     events: all,
     total: all.length,
     kinds: ["job_created", "honeypot_pass", "honeypot_fail", "critic_fail", "schema_fail", "disagreement", "retry"],
-  });
+  };
+  }, { events: [], total: 0, kinds: [] });
 }

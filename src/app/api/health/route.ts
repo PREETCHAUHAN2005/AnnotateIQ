@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, ensureDb } from "@/lib/db";
+import { isSkipLlm, predictionMode, predictionModeLabel } from "@/lib/prediction-mode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 // GET /api/health — system health check
 export async function GET() {
   try {
+    await ensureDb();
     const [jobs, activeJobs, failedJobs, totalUnits, pendingUnits, labeledUnits, reviewedUnits] =
       await Promise.all([
         db.job.count(),
@@ -22,6 +24,7 @@ export async function GET() {
     let status: "healthy" | "degraded" | "down" = "healthy";
     if (failedJobs > 0 || (totalUnits > 0 && pendingUnits > totalUnits * 0.5)) status = "degraded";
 
+    const skipLlm = isSkipLlm();
     return NextResponse.json({
       status,
       jobs,
@@ -32,6 +35,10 @@ export async function GET() {
       reviewedUnits,
       agentsAvailable: 9,
       dbConnected: true,
+      skipLlm,
+      predictionMode: predictionMode(),
+      demoLabel: predictionModeLabel(),
+      ephemeralSqlite: Boolean(process.env.VERCEL),
     });
   } catch (e) {
     console.error("[GET /api/health]", e);
@@ -46,6 +53,10 @@ export async function GET() {
       reviewedUnits: 0,
       agentsAvailable: 0,
       dbConnected: false,
+      skipLlm: isSkipLlm(),
+      predictionMode: predictionMode(),
+      demoLabel: predictionModeLabel(),
+      ephemeralSqlite: Boolean(process.env.VERCEL),
     });
   }
 }

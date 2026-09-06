@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { evaluateHeldOut, pairsFromLabeledUnits } from "@/lib/held-out";
+import { withDbJson } from "@/lib/route-error";
 import { fleissKappa, kappaVerdict } from "@/lib/scoring";
 
 export const runtime = "nodejs";
@@ -7,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 const COMPARE_JOB_CAP = 20;
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
+  return withDbJson("[GET /api/compare]", async () => {
   const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" }, take: COMPARE_JOB_CAP });
   const comparison = [];
   for (const job of jobs) {
@@ -49,6 +51,13 @@ export async function GET(_req: NextRequest) {
       }
     }
     const kappaRisk = fleissKappa(labelRatings);
+    const goldUnits = units.filter((u) => u.goldPayload);
+    const heldOut = evaluateHeldOut(
+      pairsFromLabeledUnits(
+        goldUnits.map((u) => ({ id: u.id, goldPayload: u.goldPayload, rawText: u.rawText })),
+        finals.map((f) => ({ unitId: f.unitId, payload: f.payload }))
+      )
+    );
 
     comparison.push({
       id: job.id,
@@ -67,7 +76,14 @@ export async function GET(_req: NextRequest) {
       honeypotAccuracy: hpPass + hpFail > 0 ? hpPass / (hpPass + hpFail) : 0,
       kappaRisk: { value: kappaRisk, ...kappaVerdict(kappaRisk) },
       distRisk,
+      heldOut: {
+        n: heldOut.n,
+        precision: heldOut.risk.precision,
+        recall: heldOut.risk.recall,
+        fpCostInr: heldOut.falsePositiveCost.total,
+      },
     });
   }
-  return NextResponse.json({ jobs: comparison });
+  return { jobs: comparison };
+  }, { jobs: [] });
 }

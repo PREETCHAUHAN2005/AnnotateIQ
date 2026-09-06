@@ -1,6 +1,10 @@
 # AnnotateIQ
 
-**Payment risk annotation engine.** A multi-agent pipeline that turns payment events into inspectable labels and actions so teams can train fraud and decision models. Every verdict carries evidence, confidence, and a route: auto or human review.
+**Payment risk annotation engine** for the Razorpay AI Buildathon (AI Risk Manager track). A multi-agent pipeline that turns payment events into inspectable labels and actions so teams can train fraud and decision models. Every verdict carries evidence, confidence, and a route: auto or human review.
+
+This repository is **AnnotateIQ**. It is not the earlier JEE Physics paper annotator. The GitHub clone URL may still say `Physics_Paper_Annotater` from that history — ignore that name; the product, README, and demo are payment-risk annotation only.
+
+Live demo: [https://annotateiq.vercel.app](https://annotateiq.vercel.app)
 
 <p align="center">
   <img src="docs/overview.png" alt="AnnotateIQ overview: jobs, pipeline health, and auto vs human routing" />
@@ -29,7 +33,11 @@ flowchart LR
   <img src="docs/architecture.png" alt="AnnotateIQ agent architecture: parallel specialists, merge, score, and route" />
 </p>
 
-Routing uses weakest-link agreement on critical fields (`risk_label` / `recommended_action`, or `failure_reason` / `retryability`). Disputed or low-confidence units go to the review queue. Frozen honeypots are mixed into every job so quality is measurable (accuracy + Fleiss' κ).
+Routing uses weakest-link agreement on critical fields (`risk_label` / `recommended_action`, or `failure_reason` / `retryability`). Disputed or low-confidence units go to the review queue. Frozen honeypots and IEEE-CIS `isFraud` gold are mixed in as a **held-out** set (specialists never see gold). Quality reports:
+
+- **Held-out precision and recall** on fraud = `HIGH`/`CRITICAL`
+- **False-positive cost in INR** (blocked legitimate GMV + step-up friction + ₹40 ops per false alarm)
+- Agreement (Fleiss' κ) and honeypot field accuracy as separate operational metrics — not substitutes for P/R
 
 ## Features
 
@@ -37,37 +45,55 @@ Routing uses weakest-link agreement on critical fields (`risk_label` / `recommen
 - Nine specialists with disjoint Zod contracts — each agent owns a slice, not the whole verdict
 - `k=3` self-consistency on fraud reasoning; adjudicator marks `AGREED` or `DISPUTED`
 - Auto-route at confidence ≥ 0.85; everything else is human review
-- Honeypot inspector, quality dashboard, job compare, and taxonomy coverage
+- Held-out P/R + FP cost, honeypot inspector, quality dashboard, job compare, and taxonomy coverage
 - Ingest from dummy packs, pasted JSON/CSV, or an IEEE-CIS-shaped fixture
 - Export JSONL, JSON, or CSV (auto-accepted plus human accept/edit only)
-- Heuristic fallbacks when `SKIP_LLM=1` — the pipeline still runs without a model provider
+- Heuristic fallbacks when `SKIP_LLM=1` — labelled in the UI as **Deterministic fallback demo**
 
 ## Quick start
 
 Requires **Node.js 20+**.
 
 ```bash
-git clone https://github.com/PREETCHAUHAN2005/Physics_Paper_Annotater.git
-cd Physics_Paper_Annotater
+git clone https://github.com/PREETCHAUHAN2005/AnnotateIQ.git
+# historical URL (same repo): Physics_Paper_Annotater.git
+cd AnnotateIQ
 cp .env.example .env
 npm install
 npx prisma db push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Create a dummy pack, run the live pipeline, review what was routed to humans, then export.
+Open [http://localhost:3000](http://localhost:3000). Create a dummy pack, run the pipeline, open **Quality** for held-out precision / recall / FP cost, review what was routed to humans, then export.
 
 ## Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DATABASE_URL` | `file:./dev.db` | Prisma SQLite URL. Required. |
-| `SKIP_LLM` | unset | `1` skips LLM calls and uses deterministic heuristics. Use this for local runs without a model provider. |
+| `DATABASE_URL` | `file:../db/custom.db` | Prisma SQLite URL. Required. |
+| `SKIP_LLM` | unset | `1` skips LLM calls and uses deterministic heuristics. The app banners this as **Deterministic fallback demo**. |
 | `DEMO_DISAGREE` | unset | `1` forces specialist disagreement so the human-review path is easy to demo. |
 
 When `SKIP_LLM` is unset, specialists call `z-ai-web-dev-sdk`. Keep that config out of git.
 
-On Vercel, the filesystem is read-only except `/tmp`. Set `DATABASE_URL=file:/tmp/custom.db`. Long-running pipeline routes are capped at 300s.
+`keepalive.sh` defaults to `SKIP_LLM=1` for the low-memory Cloud Agent loop. Do not present that recording as a live LLM run.
+
+### Vercel
+
+On Vercel the filesystem is read-only except `/tmp`. The app copies/bootstraps SQLite at `file:/tmp/annotate.db` and creates tables on cold start. That store is **ephemeral per isolate** — jobs can disappear after idle. Pipeline routes are capped at 300s. Production defaults `SKIP_LLM=1` unless you set `SKIP_LLM=0` and provide a working LLM client.
+
+## Held-out metrics (Razorpay track)
+
+Gold lives on honeypot / IEEE `isFraud` units and is never passed into specialists.
+
+| Metric | Definition |
+|---|---|
+| Positive class | Fraud = predicted/gold `risk_label` ∈ {HIGH, CRITICAL} |
+| Precision | TP / (TP + FP) on that held-out set |
+| Recall | TP / (TP + FN) |
+| FP cost (INR) | For each gold-negative predicted fraud: amount if HOLD/REJECT, 12% of amount if STEP_UP, plus ₹40 ops per alarm |
+
+See Quality, Insights, and Compare. Agreement (κ) and honeypot accuracy remain on those screens as operational checks, not as P/R.
 
 ## Ingest
 

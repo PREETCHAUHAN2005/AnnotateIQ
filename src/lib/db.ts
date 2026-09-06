@@ -11,6 +11,8 @@ const globalForPrisma = globalThis as unknown as {
 /**
  * Vercel production/preview: SQLite must live in /tmp (the only writable path).
  * Local `next dev` keeps DATABASE_URL from `.env` (file:../db/custom.db).
+ * Without an LLM key on Vercel we default to deterministic heuristics — the UI
+ * must label that mode "Deterministic fallback demo".
  */
 function applyRuntimeEnv() {
   if (process.env.VERCEL && process.env.SKIP_LLM !== "0") {
@@ -29,7 +31,7 @@ function applyRuntimeEnv() {
 
 function sqliteFilePath(url: string): string {
   const raw = url.replace(/^file:/, "");
-  if (raw.startsWith("/") || /^[A-Za-z]:[\\/]/.test(raw)) return raw;
+  if (raw.startsWith("/") || /^[A-Za-Z]:[\\/]/.test(raw)) return raw;
   // Prisma resolves relative file: URLs from the schema directory
   return path.resolve(process.cwd(), "prisma", raw);
 }
@@ -60,10 +62,13 @@ function prepareSqliteFile() {
 applyRuntimeEnv();
 prepareSqliteFile();
 
+const databaseUrl = process.env.DATABASE_URL ?? "file:../db/custom.db";
+
 const base =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: ["error", "warn"],
+    datasources: { db: { url: databaseUrl } },
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = base;
@@ -71,25 +76,27 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = base;
 async function ensureSchema() {
   if (!globalForPrisma.schemaReady) {
     globalForPrisma.schemaReady = (async () => {
-      try {
-        await base.$queryRaw`SELECT 1 FROM "Job" LIMIT 1`;
-      } catch (cause) {
-        console.warn(
-          "[db] SQLite schema missing; bootstrapping",
-          cause instanceof Error ? cause.message : cause
-        );
-        await base.$executeRawUnsafe("PRAGMA foreign_keys = ON");
-        for (const stmt of SQLITE_BOOTSTRAP_STATEMENTS) {
-          await base.$executeRawUnsafe(stmt);
-        }
-        await base.$queryRaw`SELECT 1 FROM "Job" LIMIT 1`;
+      await base.$connect();
+      await base.$executeRawUnsafe("PRAGMA foreign_keys = ON");
+      for (const stmt of SQLITE_BOOTSTRAP_STATEMENTS) {
+        await base.$executeRawUnsafe(stmt);
       }
     })().catch((err) => {
       globalForPrisma.schemaReady = undefined;
+      console.error(
+        "[db] schema bootstrap failed",
+        err instanceof Error ? err.message : err
+      );
       throw err;
     });
   }
   return globalForPrisma.schemaReady;
+}
+
+/** Await before the first query in a serverless isolate. Idempotent. */
+export async function ensureDb(): Promise<PrismaClient> {
+  await ensureSchema();
+  return base;
 }
 
 export const db = base.$extends({

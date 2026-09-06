@@ -159,6 +159,39 @@ export function InsightsView() {
         />
       </div>
 
+      {stats.heldOut && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            label="Held-out precision"
+            value={stats.heldOut.n ? `${(stats.heldOut.risk.precision * 100).toFixed(1)}%` : "—"}
+            sub={`n=${stats.heldOut.n} gold units`}
+            icon={Target}
+            tone="emerald"
+          />
+          <KpiCard
+            label="Held-out recall"
+            value={stats.heldOut.n ? `${(stats.heldOut.risk.recall * 100).toFixed(1)}%` : "—"}
+            sub={`TP ${stats.heldOut.risk.tp} · FN ${stats.heldOut.risk.fn}`}
+            icon={Award}
+            tone="teal"
+          />
+          <KpiCard
+            label="FP cost"
+            value={new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(stats.heldOut.falsePositiveCost.total)}
+            sub={`${stats.heldOut.falsePositiveCost.falsePositives} false positives`}
+            icon={ShieldCheck}
+            tone="amber"
+          />
+          <KpiCard
+            label="FN loss (missed)"
+            value={new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(stats.heldOut.falseNegativeCost.missedFraudGmv)}
+            sub={`${stats.heldOut.falseNegativeCost.falseNegatives} missed fraud`}
+            icon={Clock}
+            tone="violet"
+          />
+        </div>
+      )}
+
       {/* Trend charts */}
       <div className="grid lg:grid-cols-2 gap-5">
         <Card>

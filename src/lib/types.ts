@@ -213,6 +213,42 @@ export type ReviewItem = {
   reviewNote: string | null;
 };
 
+export type HeldOutConfusion = {
+  tp: number;
+  fp: number;
+  fn: number;
+  tn: number;
+  n: number;
+  precision: number;
+  recall: number;
+  f1: number;
+};
+
+export type HeldOutReport = {
+  n: number;
+  labeled: number;
+  source: string;
+  positiveClass: string;
+  risk: HeldOutConfusion;
+  action: HeldOutConfusion;
+  falsePositiveCost: {
+    currency: "INR";
+    reviewCostPerAlarm: number;
+    blockedLegitimateGmv: number;
+    stepUpFriction: number;
+    reviewOpsCost: number;
+    total: number;
+    falsePositives: number;
+    notes: string;
+  };
+  falseNegativeCost: {
+    currency: "INR";
+    missedFraudGmv: number;
+    falseNegatives: number;
+    notes: string;
+  };
+};
+
 export type QualityStats = {
   job: { id: string; filename: string; status: string; unitCount: number };
   totals: {
@@ -223,6 +259,7 @@ export type QualityStats = {
     reviewed: number;
     honeypots: number;
   };
+  heldOut: HeldOutReport;
   rates: {
     autoRate: number;
     hoursSaved: number;
@@ -275,6 +312,7 @@ export type JobComparison = {
   honeypotAccuracy: number;
   kappaRisk: { value: number; label: string; tone: "good" | "warn" | "bad" };
   distRisk: Record<string, number>;
+  heldOut?: { n: number; precision: number; recall: number; fpCostInr: number };
 };
 
 export type HoneypotDiff = {
@@ -372,12 +410,29 @@ export type InsightsStats = {
     overallAvgConf: number;
     totalHoursSaved: number;
   };
+  heldOut?: HeldOutReport;
   trends: JobTrend[];
   distributions: {
     risk_label: Record<string, number>;
     recommended_action: Record<string, number>;
     consensus: Record<string, number>;
   };
+};
+
+export type HealthStatus = {
+  status: "healthy" | "degraded" | "down";
+  jobs: number;
+  activeJobs: number;
+  totalUnits: number;
+  pendingUnits: number;
+  labeledUnits: number;
+  reviewedUnits: number;
+  agentsAvailable: number;
+  dbConnected: boolean;
+  skipLlm?: boolean;
+  predictionMode?: "deterministic_fallback" | "llm";
+  demoLabel?: string;
+  ephemeralSqlite?: boolean;
 };
 
 export type IeeeDatasetInfo = {

@@ -2,6 +2,7 @@ import type {
   ActivityEvent,
   Draft,
   FinalRecord,
+  HealthStatus,
   HoneypotResult,
   IeeeDatasetInfo,
   InsightsStats,
@@ -87,4 +88,5 @@ export const api = {
     ),
   search: (q: string) => jfetch<{ results: SearchResult[]; total: number; query: string }>(`/api/search?q=${encodeURIComponent(q)}`),
   getInsights: () => jfetch<InsightsStats>("/api/insights"),
+  getHealth: () => jfetch<HealthStatus>("/api/health"),
 };

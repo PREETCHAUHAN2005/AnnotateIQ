@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { evaluateHeldOut, pairsFromLabeledUnits } from "@/lib/held-out";
+import { withDbJson } from "@/lib/route-error";
 import { fleissKappa } from "@/lib/scoring";
 
 export const runtime = "nodejs";
@@ -8,9 +9,11 @@ export const dynamic = "force-dynamic";
 const INSIGHTS_JOB_CAP = 20;
 
 export async function GET() {
+  return withDbJson("[GET /api/insights]", async () => {
   const recent = await db.job.findMany({ orderBy: { createdAt: "desc" }, take: INSIGHTS_JOB_CAP });
   const jobs = [...recent].reverse();
   const jobTrends = [];
+  const heldOutPairs = [];
   let cumulativeUnits = 0;
   let cumulativeAuto = 0;
   let cumulativeHuman = 0;
@@ -70,6 +73,12 @@ export async function GET() {
       cumulativeHuman,
       cumulativeHours,
     });
+    heldOutPairs.push(
+      ...pairsFromLabeledUnits(
+        units.filter((u) => u.goldPayload).map((u) => ({ id: u.id, goldPayload: u.goldPayload, rawText: u.rawText })),
+        finals.map((f) => ({ unitId: f.unitId, payload: f.payload }))
+      )
+    );
   }
 
   const allFinals = jobs.length
@@ -95,9 +104,11 @@ export async function GET() {
     }
   }
 
+  const heldOut = evaluateHeldOut(heldOutPairs);
+
   const totalFinals = allFinals.length;
   const totalAuto = allFinals.filter((f) => f.route === "auto").length;
-  return NextResponse.json({
+  return {
     summary: {
       totalJobs: jobs.length,
       totalUnits: cumulativeUnits,
@@ -107,7 +118,9 @@ export async function GET() {
       overallAvgConf: totalFinals ? allFinals.reduce((a, f) => a + f.confidence, 0) / totalFinals : 0,
       totalHoursSaved: cumulativeHours,
     },
+    heldOut,
     trends: jobTrends,
     distributions: { risk_label: riskDist, recommended_action: actionDist, consensus: consDist },
-  });
+  };
+  }, { trends: [], heldOut: undefined, summary: { totalJobs: 0, totalUnits: 0, totalAuto: 0, totalHuman: 0, overallAutoRate: 0, overallAvgConf: 0, totalHoursSaved: 0 } });
 }

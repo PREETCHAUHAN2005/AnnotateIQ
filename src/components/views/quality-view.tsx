@@ -158,6 +158,65 @@ export function QualityView({ job }: { job: Job }) {
         />
       </div>
 
+      {stats.heldOut && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Held-out precision, recall, and FP cost
+            </CardTitle>
+            <CardDescription>
+              Razorpay AI Risk Manager bar. Gold is frozen honeypots / IEEE-CIS <code>isFraud</code> —
+              specialists never see it. Agreement and honeypot accuracy are separate.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-lg border border-border/60 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Precision</div>
+                <div className="text-2xl font-bold tabular-nums">
+                  {stats.heldOut.n ? `${(stats.heldOut.risk.precision * 100).toFixed(1)}%` : "—"}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  TP {stats.heldOut.risk.tp} / (TP+FP {stats.heldOut.risk.tp + stats.heldOut.risk.fp})
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/60 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Recall</div>
+                <div className="text-2xl font-bold tabular-nums">
+                  {stats.heldOut.n ? `${(stats.heldOut.risk.recall * 100).toFixed(1)}%` : "—"}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  TP {stats.heldOut.risk.tp} / (TP+FN {stats.heldOut.risk.tp + stats.heldOut.risk.fn})
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/60 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">FP cost</div>
+                <div className="text-2xl font-bold tabular-nums">
+                  {formatInr(stats.heldOut.falsePositiveCost.total)}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  {stats.heldOut.falsePositiveCost.falsePositives} false positives · INR
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/60 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Held-out n</div>
+                <div className="text-2xl font-bold tabular-nums">{stats.heldOut.n}</div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  F1 {(stats.heldOut.risk.f1 * 100).toFixed(1)}% · FN cost {formatInr(stats.heldOut.falseNegativeCost.missedFraudGmv)}
+                </div>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-4 gap-2 text-xs font-mono">
+              <span>TP {stats.heldOut.risk.tp}</span>
+              <span className="text-rose-400">FP {stats.heldOut.risk.fp}</span>
+              <span className="text-rose-400">FN {stats.heldOut.risk.fn}</span>
+              <span>TN {stats.heldOut.risk.tn}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">{stats.heldOut.falsePositiveCost.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Fleiss kappa + honeypot trust */}
       <div className="grid lg:grid-cols-2 gap-5">
         <Card>
@@ -529,4 +588,8 @@ function KappaBar({
       <div className="text-[10px] text-muted-foreground mt-1">{kappa.n} events rated by fraud reasoning k=3</div>
     </div>
   );
+}
+
+function formatInr(n: number): string {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 }

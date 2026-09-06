@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { RISK_LABELS } from "@/lib/schemas";
+import { withDbJson } from "@/lib/route-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  return withDbJson("[GET /api/taxonomy]", async () => {
   const finals = await db.final.findMany({ include: { unit: true } });
   const stats: Record<
     string,
@@ -62,10 +63,11 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({
+  return {
     totalLabels: RISK_LABELS.length,
     coveredLabels: labels.filter((c) => c.count > 0).length,
     totalEvents: finals.length,
     labels: labels.sort((a, b) => b.count - a.count),
-  });
+  };
+  }, { totalLabels: 0, coveredLabels: 0, totalEvents: 0, labels: [] });
 }

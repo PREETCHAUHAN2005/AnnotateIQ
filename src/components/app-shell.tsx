@@ -23,7 +23,7 @@ import {
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type NavItem = {
@@ -83,9 +83,32 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [demoLabel, setDemoLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((h: { predictionMode?: string; demoLabel?: string }) => {
+        if (cancelled) return;
+        if (h.predictionMode === "deterministic_fallback") {
+          setDemoLabel(h.demoLabel ?? "Deterministic fallback demo");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background bg-grid">
+      {demoLabel && (
+        <div className="shrink-0 z-50 border-b border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-center text-[11px] sm:text-xs text-amber-100">
+          <span className="font-semibold">{demoLabel}.</span>{" "}
+          <code className="font-mono">SKIP_LLM=1</code> — recorded predictions are deterministic heuristics, not live LLM results.
+        </div>
+      )}
       <header className="shrink-0 z-40 border-b border-border/60 bg-card/80 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-2 sm:gap-3 px-3 sm:px-4 min-w-0">
           <button

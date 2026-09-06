@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db, ensureDb } from "@/lib/db";
 import { createJobFromIeee, createJobFromSample, createJobFromText } from "@/lib/ingest";
 import { FAILURE_BATCHES } from "@/lib/data/sample-failures";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { getIeeeDatasetInfo } from "@/lib/ieee";
 import { asRecord, enforceRateLimit, RATE_JOBS_CREATE, readJsonBody } from "@/lib/http-guards";
+import { dbRouteError } from "@/lib/route-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    await ensureDb();
     const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" } });
     return NextResponse.json({ jobs, ieee: getIeeeDatasetInfo() });
   } catch (e) {

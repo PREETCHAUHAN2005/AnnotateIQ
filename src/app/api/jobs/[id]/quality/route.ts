@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { evaluateHeldOut, pairsFromLabeledUnits } from "@/lib/held-out";
+import { dbRouteError } from "@/lib/route-error";
 import { fleissKappa, honeypotAccuracy, kappaVerdict } from "@/lib/scoring";
 
 export const runtime = "nodejs";
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+  try {
   const job = await db.job.findUnique({ where: { id } });
   if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
 
@@ -137,6 +140,14 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     confByLabel[lab].count++;
   }
 
+  const goldUnits = units.filter((u) => u.goldPayload);
+  const heldOut = evaluateHeldOut(
+    pairsFromLabeledUnits(
+      goldUnits.map((u) => ({ id: u.id, goldPayload: u.goldPayload, rawText: u.rawText })),
+      finals.map((f) => ({ unitId: f.unitId, payload: f.payload }))
+    )
+  );
+
   return NextResponse.json({
     job: { id: job.id, filename: job.filename, status: job.status, unitCount: job.unitCount },
     totals: {
@@ -147,6 +158,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       reviewed,
       honeypots: honeypotUnits.length,
     },
+    heldOut,
     rates: { autoRate, hoursSaved, manualMinutes: manualMin, actualMinutes: actualMin },
     kappa: {
       risk_label: { value: kappaLabel, ...kappaVerdict(kappaLabel), n: labelRatings.length },
@@ -171,6 +183,9 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       .map(([label, v]) => ({ label, avg: v.sum / v.count, count: v.count }))
       .sort((a, b) => b.avg - a.avg),
   });
+  } catch (e) {
+    return dbRouteError("[GET /api/jobs/:id/quality]", e);
+  }
 }
 
 function computeLatency(drafts: { agent: string; latencyMs: number | null; attempt: number }[]) {
