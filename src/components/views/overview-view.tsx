@@ -2,13 +2,11 @@
 
 import type { Job } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PipelineHealth } from "@/components/pipeline-health";
 import { RecentActivityWidget } from "@/components/recent-activity-widget";
 import { AnimatedCounter } from "@/components/animated-counter";
 import {
-  Atom,
   GitBranch,
   Gauge,
   ListChecks,
@@ -17,6 +15,8 @@ import {
   Layers,
   Cpu,
   CheckCircle2,
+  Share2,
+  Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,9 +43,14 @@ export function OverviewView({
         <CardContent className="relative p-6 sm:p-8">
           <div className="flex flex-col lg:flex-row items-start gap-6">
             <div className="flex-1">
-              <Badge variant="outline" className="mb-3 gap-1.5 border-primary/30 text-primary">
-                <Atom className="h-3 w-3" /> Payment risk · Multi-agent
-              </Badge>
+              <div className="mb-3">
+                <p className="text-xs font-semibold tracking-[0.22em] uppercase text-primary">
+                  AnnotateIQ
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Payment risk annotation engine
+                </p>
+              </div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
                 Annotate payment risk at <span className="text-gradient-emerald">inspectable grade</span>
               </h1>
@@ -66,7 +71,7 @@ export function OverviewView({
               </div>
               {/* Feature pills */}
               <div className="mt-4 flex flex-wrap gap-2">
-                {["k=3 fraud reasoning", "adjudicator-gated", "honeypot-verified", "weakest-link scoring"].map((pill) => (
+                {["k=3 fraud reasoning", "adjudicator-gated", "job-scoped rings", "honeypot-verified", "weakest-link scoring"].map((pill) => (
                   <span key={pill} className="text-[10px] font-mono px-2 py-1 rounded-full bg-primary/5 border border-primary/20 text-primary/80">
                     {pill}
                   </span>
@@ -83,16 +88,18 @@ export function OverviewView({
                 {[
                   { label: "Normalize payment event", icon: Layers, tone: "text-muted-foreground" },
                   { label: "4 specialists in parallel", icon: Cpu, tone: "text-primary" },
+                  { label: "Ring analyst · job graph", icon: Share2, tone: "text-foreground/80" },
+                  { label: "Failure jobs · reason + retry", icon: Timer, tone: "text-foreground/70" },
                   { label: "Fraud reasoning · k=3", icon: GitBranch, tone: "text-foreground/80" },
                   { label: "Adjudicator · AGREED/DISPUTED", icon: ShieldCheck, tone: "text-foreground/60" },
                   { label: "Confidence ≥ 0.85 → auto", icon: Gauge, tone: "text-foreground" },
-                ].map((step, i) => {
+                ].map((step, i, steps) => {
                   const Icon = step.icon;
                   return (
-                    <div key={i} className="flex items-center gap-2.5 text-sm">
+                    <div key={step.label} className="flex items-center gap-2.5 text-sm">
                       <div className="flex flex-col items-center">
                         <Icon className={cn("h-4 w-4", step.tone)} />
-                        {i < 4 && <div className="w-px h-4 bg-border" />}
+                        {i < steps.length - 1 && <div className="w-px h-4 bg-border" />}
                       </div>
                       <span className="text-foreground/90">{step.label}</span>
                     </div>

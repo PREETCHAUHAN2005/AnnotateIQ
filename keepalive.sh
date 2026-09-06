@@ -2,6 +2,7 @@
 # Keepalive wrapper — runs next dev with limited heap and restarts on exit.
 cd /home/z/my-project
 export SKIP_LLM=1
+export DEMO_DISAGREE=1
 export NODE_OPTIONS="--max-old-space-size=768"
 while true; do
   echo "[keepalive $(date +%H:%M:%S)] starting next dev (webpack, 768MB heap)..."

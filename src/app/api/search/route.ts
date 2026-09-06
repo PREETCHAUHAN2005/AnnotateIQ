@@ -1,10 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceRateLimit, RATE_SEARCH } from "@/lib/http-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const SEARCH_WINDOW = 500;
+
+type SearchPayload = {
+  event?: {
+    transaction_id?: string;
+    merchant_id?: string;
+    amount?: number;
+    decline_code?: string;
+    gateway_message?: string;
+  };
+  risk_label?: string;
+  recommended_action?: string;
+  risk_factors?: string[];
+  explanation?: string;
+  behavioral_pattern?: string;
+  risk_cluster_id?: string | null;
+  shared_entities?: string[];
+  member_transaction_ids?: string[];
+  failure_reason?: string;
+  retryability?: string;
+};
+
 export async function GET(req: NextRequest) {
+  const limited = enforceRateLimit(req, "search", RATE_SEARCH);
+  if (limited) return limited;
+
   const q = req.nextUrl.searchParams.get("q")?.trim().toLowerCase() ?? "";
   if (q.length < 2) {
     return NextResponse.json({ results: [], total: 0, query: q });
@@ -12,30 +38,18 @@ export async function GET(req: NextRequest) {
 
   const finals = await db.final.findMany({
     include: { unit: true },
-    orderBy: { unit: { seq: "asc" } },
+    orderBy: { createdAt: "desc" },
+    take: SEARCH_WINDOW,
   });
 
   const results = finals
     .map((f) => {
-      const p = JSON.parse(f.payload) as {
-        event?: {
-          transaction_id?: string;
-          merchant_id?: string;
-          amount?: number;
-          decline_code?: string;
-          gateway_message?: string;
-        };
-        risk_label?: string;
-        recommended_action?: string;
-        risk_factors?: string[];
-        explanation?: string;
-        behavioral_pattern?: string;
-        risk_cluster_id?: string | null;
-        shared_entities?: string[];
-        member_transaction_ids?: string[];
-        failure_reason?: string;
-        retryability?: string;
-      };
+      let p: SearchPayload;
+      try {
+        p = JSON.parse(f.payload) as SearchPayload;
+      } catch {
+        return null;
+      }
       const haystack = [
         p.event?.transaction_id,
         p.event?.merchant_id,

@@ -27,19 +27,19 @@ const TOUR_STEPS = [
   {
     icon: Sparkles,
     title: "Welcome to AnnotateIQ",
-    description: "A multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models. Specialists, fraud reasoning, and an adjudicator produce the labels. Synthetic/public data only.",
+    description: "A multi-agent system that annotates payment events with inspectable risk labels and recommended actions. Specialists, fraud reasoning, an adjudicator, and a job-scoped ring analyst produce the labels. Failure packs add reason + retry routing. Synthetic/public data only.",
     color: "text-primary",
   },
   {
     icon: Play,
     title: "Live Pipeline",
-    description: "Watch four specialists run in parallel, then fraud reasoning (k=3) and an adjudicator. Disputed or low-confidence events route to human review.",
+    description: "Watch four specialists run in parallel, then a job-scoped ring analyst, fraud reasoning (k=3), and an adjudicator. Failure jobs add two more specialists. DISPUTED or low-confidence events route to human review.",
     color: "text-foreground",
   },
   {
     icon: GitBranch,
     title: "Review Queue",
-    description: "Low-confidence units (conf < 0.85) route here. Inspect where agents disagreed, accept/edit/reject with keyboard shortcuts (A/E/R/J/K).",
+    description: "DISPUTED events and low-confidence units (conf < 0.85) route here. Inspect where agents disagreed, accept/edit/reject with keyboard shortcuts (A/E/R/J/K).",
     color: "text-foreground/60",
   },
   {
@@ -75,7 +75,7 @@ const TOUR_STEPS = [
   {
     icon: Keyboard,
     title: "Keyboard Shortcuts",
-    description: "Press ⌘K for the command palette, ? for shortcuts help, or g+key to jump between views (g+o = overview, g+p = pipeline, etc.).",
+    description: "Press ⌘K / Ctrl+K for the command palette, ? for shortcuts help, or g+key to jump between views (g+o = overview, g+p = pipeline, etc.).",
     color: "text-primary",
   },
 ];

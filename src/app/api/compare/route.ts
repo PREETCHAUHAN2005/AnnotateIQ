@@ -5,8 +5,10 @@ import { fleissKappa, kappaVerdict } from "@/lib/scoring";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const COMPARE_JOB_CAP = 20;
+
 export async function GET(_req: NextRequest) {
-  const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" } });
+  const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" }, take: COMPARE_JOB_CAP });
   const comparison = [];
   for (const job of jobs) {
     const finals = await db.final.findMany({ where: { jobId: job.id } });
@@ -22,15 +24,29 @@ export async function GET(_req: NextRequest) {
 
     const distRisk: Record<string, number> = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
     for (const f of finals) {
-      const p = JSON.parse(f.payload) as { risk_label?: string };
-      distRisk[p.risk_label ?? "LOW"] = (distRisk[p.risk_label ?? "LOW"] ?? 0) + 1;
+      try {
+        const p = JSON.parse(f.payload) as { risk_label?: string };
+        distRisk[p.risk_label ?? "LOW"] = (distRisk[p.risk_label ?? "LOW"] ?? 0) + 1;
+      } catch {
+        /* skip corrupt payload */
+      }
     }
 
     const drafts = await db.draft.findMany({ where: { unitId: { in: units.map((u) => u.id) } } });
     const labelRatings: string[][] = [];
     for (const u of units) {
       const rows = drafts.filter((d) => d.unitId === u.id && d.agent === "fraud_reasoning" && d.attempt === 1);
-      if (rows.length >= 2) labelRatings.push(rows.map((d) => (JSON.parse(d.payload) as { risk_label: string }).risk_label));
+      if (rows.length >= 2) {
+        labelRatings.push(
+          rows.map((d) => {
+            try {
+              return (JSON.parse(d.payload) as { risk_label: string }).risk_label;
+            } catch {
+              return "LOW";
+            }
+          })
+        );
+      }
     }
     const kappaRisk = fleissKappa(labelRatings);
 

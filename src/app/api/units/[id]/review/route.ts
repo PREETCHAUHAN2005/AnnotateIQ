@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import type { UnitAnnotation } from "@/lib/schemas";
+import { UnitAnnotation } from "@/lib/schemas";
+import { asRecord, enforceRateLimit, RATE_REVIEW, readJsonBody } from "@/lib/http-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MAX_NOTE = 2000;
+const MAX_REVIEWER = 80;
+
 // POST /api/units/[id]/review — human reviewer action on a final record.
 // body: { action: "accept"|"edit"|"reject", editedPayload?: UnitAnnotation, note?: string, reviewer?: string }
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const limited = enforceRateLimit(req, "review", RATE_REVIEW);
+  if (limited) return limited;
+
   const { id } = await ctx.params;
-  const body = await req.json().catch(() => ({}));
-  const action = body.action as "accept" | "edit" | "reject" | undefined;
-  if (!action || !["accept", "edit", "reject"].includes(action)) {
+  const parsedBody = await readJsonBody(req);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = asRecord(parsedBody.body);
+
+  const action = body.action;
+  if (action !== "accept" && action !== "edit" && action !== "reject") {
     return NextResponse.json({ error: "invalid action" }, { status: 400 });
   }
 
@@ -24,8 +34,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   let route = final.route;
   let confidence = final.confidence;
 
-  if (action === "edit" && body.editedPayload) {
-    const edited = body.editedPayload as UnitAnnotation;
+  if (action === "edit") {
+    const parsed = UnitAnnotation.safeParse(body.editedPayload);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "invalid editedPayload" }, { status: 400 });
+    }
+    const edited = parsed.data;
     edited.confidence = 1.0;
     edited.route = "auto";
     payload = JSON.stringify(edited);
@@ -33,7 +47,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     confidence = 1.0;
   } else if (action === "accept") {
     try {
-      const p = JSON.parse(payload) as UnitAnnotation;
+      const p = UnitAnnotation.parse(JSON.parse(payload));
       p.confidence = Math.max(p.confidence ?? 0, 0.85);
       p.route = "auto";
       payload = JSON.stringify(p);
@@ -44,12 +58,19 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     confidence = Math.max(final.confidence, 0.85);
   }
 
+  const note =
+    typeof body.note === "string" && body.note.trim() ? body.note.trim().slice(0, MAX_NOTE) : null;
+  const reviewer =
+    typeof body.reviewer === "string" && body.reviewer.trim()
+      ? body.reviewer.trim().slice(0, MAX_REVIEWER)
+      : "reviewer";
+
   const updated = await db.final.update({
     where: { unitId: id },
     data: {
       reviewerAction: action,
-      reviewNote: body.note ? String(body.note) : null,
-      reviewedBy: body.reviewer ? String(body.reviewer) : "reviewer",
+      reviewNote: note,
+      reviewedBy: reviewer,
       payload,
       route,
       confidence,
