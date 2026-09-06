@@ -31,7 +31,12 @@ function applyRuntimeEnv() {
 
 function sqliteFilePath(url: string): string {
   const raw = url.replace(/^file:/, "");
-  if (raw.startsWith("/") || /^[A-Za-Z]:[\\/]/.test(raw)) return raw;
+  const winDrive =
+    raw.length >= 3 &&
+    raw[1] === ":" &&
+    (raw[2] === "\\" || raw[2] === "/") &&
+    ((raw[0] >= "A" && raw[0] <= "Z") || (raw[0] >= "a" && raw[0] <= "z"));
+  if (raw.startsWith("/") || winDrive) return raw;
   // Prisma resolves relative file: URLs from the schema directory
   return path.resolve(process.cwd(), "prisma", raw);
 }
