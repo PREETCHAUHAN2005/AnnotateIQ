@@ -64,7 +64,7 @@ export const api = {
   getFinals: (id: string) => jfetch<{ finals: FinalRecord[] }>(`/api/jobs/${id}/finals`),
   getDrafts: (jobId: string, unitId: string) =>
     jfetch<{
-      unit: { id: string; seq: number; stem: string; options: string[] | null; isHoneypot: boolean; goldPayload: Record<string, unknown> | null; attempt: number } | null;
+      unit: { id: string; seq: number; stem: string; options: string[] | null; isHoneypot: boolean; attempt: number } | null;
       drafts: Draft[];
       final: { payload: unknown; confidence: number; agreement: number; route: string; reviewedBy: string | null; reviewerAction: string | null } | null;
     }>(`/api/jobs/${jobId}/drafts/${unitId}`),

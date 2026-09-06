@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -19,6 +20,10 @@ export const metadata: Metadata = {
   title: "AnnotateIQ — Payment Risk Annotation Engine",
   description:
     "Multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models. Synthetic and public-shaped data only — not Razorpay production transactions.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 /** Runs before paint — prevents light/dark flash without a React <script> child. */
@@ -31,13 +36,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
+        <Script id="annotateiq-theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
         <ThemeProvider>
           <ErrorBoundary>{children}</ErrorBoundary>
           <Toaster />

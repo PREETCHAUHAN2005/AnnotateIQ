@@ -176,7 +176,7 @@ export function ExportView({ job }: { job: Job }) {
             </div>
           ) : eligible.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              No eligible rows yet. Run the pipeline and review units.
+              No eligible rows yet. Run the pipeline — auto-accepted rows are eligible immediately; human-routed rows appear after accept or edit.
             </p>
           ) : (
             <ScrollArea className="h-[420px]">

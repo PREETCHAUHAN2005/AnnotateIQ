@@ -181,7 +181,7 @@ export function KeyboardShortcutsHelp({
           <div className="space-y-1.5">
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Global</div>
             {[
-              { keys: ["⌘", "K"], action: "Open command palette" },
+              { keys: ["⌘/Ctrl", "K"], action: "Open command palette" },
               { keys: ["?"], action: "Show this help" },
               { keys: ["g", "o"], action: "Go to Overview" },
               { keys: ["g", "j"], action: "Go to Jobs" },

@@ -519,7 +519,9 @@ export function PipelineView({
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/20">
                   <span className="text-primary">Est. time</span>
-                  <span className="font-mono font-bold text-primary">~{Math.ceil(job.unitCount * 0.5)} min</span>
+                  <span className="font-mono font-bold text-primary text-right">
+                    seconds on heuristics · ~{Math.max(1, Math.ceil(job.unitCount * 0.5))} min with LLM
+                  </span>
                 </div>
               </div>
               <div className="text-xs text-muted-foreground leading-relaxed">

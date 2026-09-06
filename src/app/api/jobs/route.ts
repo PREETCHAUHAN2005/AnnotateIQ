@@ -4,7 +4,7 @@ import { createJobFromIeee, createJobFromSample, createJobFromText } from "@/lib
 import { FAILURE_BATCHES } from "@/lib/data/sample-failures";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { getIeeeDatasetInfo } from "@/lib/ieee";
-import { dbRouteError } from "@/lib/route-error";
+import { asRecord, enforceRateLimit, RATE_JOBS_CREATE, readJsonBody } from "@/lib/http-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +19,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = enforceRateLimit(req, "jobs:create", RATE_JOBS_CREATE);
+  if (limited) return limited;
+
+  const parsed = await readJsonBody(req);
+  if (!parsed.ok) return parsed.response;
+  const body = asRecord(parsed.body);
+
   try {
-    const body = await req.json().catch(() => ({}));
     let jobId: string;
 
     if (body.mode === "sample") {
@@ -58,6 +64,10 @@ export async function POST(req: NextRequest) {
       message.includes("too large") ||
       message.includes("Too many") ||
       message.includes("IEEE");
-    return NextResponse.json({ error: message }, { status: clientError ? 400 : 500 });
+    if (!clientError) console.error("job create error", e);
+    return NextResponse.json(
+      { error: clientError ? message : "Job create failed" },
+      { status: clientError ? 400 : 500 }
+    );
   }
 }

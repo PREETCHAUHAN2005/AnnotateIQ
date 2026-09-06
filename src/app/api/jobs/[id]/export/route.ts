@@ -18,21 +18,32 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     (f) => f.route === "auto" || f.reviewerAction === "accept" || f.reviewerAction === "edit"
   );
 
-  const rows = eligible.map((f) => {
-    const p = JSON.parse(f.payload);
-    const event = p.event ?? {};
-    return {
-      ...p,
-      unit_id: p.unit_id ?? f.unitId,
-      seq: f.unit.seq,
-      transaction_id: event.transaction_id,
-      amount: event.amount,
-      merchant_id: event.merchant_id,
-      risk_factors: Array.isArray(p.risk_factors) ? p.risk_factors.join("; ") : "",
-      evidence_count: Array.isArray(p.evidence) ? p.evidence.length : 0,
-      reviewed_by: f.reviewedBy ?? null,
-      reviewer_action: f.reviewerAction ?? (f.route === "auto" ? "auto" : null),
-    };
+  const rows = eligible.flatMap((f) => {
+    try {
+      const p = JSON.parse(f.payload) as Record<string, unknown> & {
+        event?: { transaction_id?: string; amount?: unknown; merchant_id?: string };
+        unit_id?: string;
+        risk_factors?: unknown;
+        evidence?: unknown;
+      };
+      const event = p.event ?? {};
+      return [
+        {
+          ...p,
+          unit_id: p.unit_id ?? f.unitId,
+          seq: f.unit.seq,
+          transaction_id: event.transaction_id,
+          amount: event.amount,
+          merchant_id: event.merchant_id,
+          risk_factors: Array.isArray(p.risk_factors) ? p.risk_factors.join("; ") : "",
+          evidence_count: Array.isArray(p.evidence) ? p.evidence.length : 0,
+          reviewed_by: f.reviewedBy ?? null,
+          reviewer_action: f.reviewerAction ?? (f.route === "auto" ? "auto" : null),
+        },
+      ];
+    } catch {
+      return [];
+    }
   });
 
   if (format === "json") {
@@ -74,7 +85,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       "evidence_count",
     ];
     const escape = (v: unknown) => {
-      const s = String(v ?? "");
+      let s = String(v ?? "");
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
       if (s.includes(",") || s.includes('"') || s.includes("\n")) return `"${s.replace(/"/g, '""')}"`;
       return s;
     };

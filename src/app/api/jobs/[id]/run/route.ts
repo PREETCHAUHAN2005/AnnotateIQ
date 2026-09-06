@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { runPipeline } from "@/lib/pipeline";
+import { enforceRateLimit, RATE_JOBS_RUN } from "@/lib/http-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const limited = enforceRateLimit(req, "jobs:run", RATE_JOBS_RUN);
+  if (limited) return limited;
+
   const { id } = await ctx.params;
   const job = await db.job.findUnique({ where: { id } });
   if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -37,9 +41,6 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   } catch (e) {
     console.error("pipeline error", e);
     await db.job.update({ where: { id }, data: { status: "failed" } }).catch(() => {});
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : String(e) },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: "Pipeline failed" }, { status: 500 });
   }
 }

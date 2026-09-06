@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceRateLimit, RATE_JOBS_MUTATE } from "@/lib/http-guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST /api/jobs/[id]/reset — clear all drafts/finals/events for a job so the
 // pipeline can be re-run from scratch. Units are preserved but reset to pending.
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const limited = enforceRateLimit(req, "jobs:mutate", RATE_JOBS_MUTATE);
+  if (limited) return limited;
+
   const { id } = await ctx.params;
   const job = await db.job.findUnique({ where: { id } });
   if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
