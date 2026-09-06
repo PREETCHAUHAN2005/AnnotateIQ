@@ -275,6 +275,7 @@ export default function Home() {
         activeJob={activeJob}
         onRefreshJobs={refreshJobs}
         loadingJobs={loadingJobs}
+        onOpenPalette={() => setPaletteOpen(true)}
       >
         <AnimatePresence mode="wait">
           <motion.div
