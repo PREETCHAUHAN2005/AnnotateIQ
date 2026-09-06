@@ -21,7 +21,7 @@ export type IeeeIngestSpec = {
 };
 
 export function ieeeAbsolutePath(rel = IEEE_RELATIVE): string {
-  return path.join(process.cwd(), rel);
+  return path.join(process.cwd(), "data", path.basename(rel));
 }
 
 function readLocalRows(rel: string): unknown[] {

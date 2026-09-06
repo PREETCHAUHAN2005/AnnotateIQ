@@ -30,7 +30,8 @@ export async function GET() {
       agentsAvailable: 9,
       dbConnected: true,
     });
-  } catch {
+  } catch (e) {
+    console.error("[GET /api/health]", e);
     // Always 200 so clients can render a "down" state instead of spinning forever
     return NextResponse.json({
       status: "down",

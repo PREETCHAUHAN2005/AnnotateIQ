@@ -4,13 +4,18 @@ import { createJobFromIeee, createJobFromSample, createJobFromText } from "@/lib
 import { FAILURE_BATCHES } from "@/lib/data/sample-failures";
 import { SAMPLE_BATCHES } from "@/lib/data/sample-transactions";
 import { getIeeeDatasetInfo } from "@/lib/ieee";
+import { dbRouteError } from "@/lib/route-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ jobs, ieee: getIeeeDatasetInfo() });
+  try {
+    const jobs = await db.job.findMany({ orderBy: { createdAt: "desc" } });
+    return NextResponse.json({ jobs, ieee: getIeeeDatasetInfo() });
+  } catch (e) {
+    return dbRouteError("[GET /api/jobs]", e, { jobs: [] });
+  }
 }
 
 export async function POST(req: NextRequest) {

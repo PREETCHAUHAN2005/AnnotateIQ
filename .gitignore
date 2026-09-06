@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -54,9 +55,11 @@ server.log
 /skills/
 .vercel
 .env*
+!.env.example
 
 # local docs — keep markdown out of GitHub
 *.md
+!README.md
 *.docx
 
 # local SQLite — runtime jobs/annotations, do not push
@@ -64,3 +67,4 @@ server.log
 *.db-journal
 *.db-wal
 *.db-shm
+!db/demo.sqlite
