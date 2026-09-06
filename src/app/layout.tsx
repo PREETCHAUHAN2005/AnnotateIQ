@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "AnnotateIQ — Payment Risk Annotation Engine",
   description:
     "Multi-agent system that annotates payment events with inspectable risk labels and recommended actions so teams can train better fraud and decision models. Synthetic and public-shaped data only — not Razorpay production transactions.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 /** Runs before paint — prevents light/dark flash without a React <script> child. */

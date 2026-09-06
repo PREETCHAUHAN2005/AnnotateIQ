@@ -7,30 +7,31 @@ export const dynamic = "force-dynamic";
 // GET /api/health — system health check
 export async function GET() {
   try {
-    const jobs = await db.job.findMany();
-    const units = await db.unit.findMany();
-    const totalUnits = units.length;
-    const pendingUnits = units.filter((u) => u.status === "pending").length;
-    const labeledUnits = units.filter((u) => u.status === "labeled" || u.status === "reviewed").length;
-    const activeJobs = jobs.filter((j) => j.status === "labeling" || j.status === "extracting").length;
-    const failedJobs = jobs.filter((j) => j.status === "failed").length;
+    const [jobs, activeJobs, failedJobs, totalUnits, pendingUnits, labeledUnits, reviewedUnits] =
+      await Promise.all([
+        db.job.count(),
+        db.job.count({ where: { status: { in: ["labeling", "extracting"] } } }),
+        db.job.count({ where: { status: "failed" } }),
+        db.unit.count(),
+        db.unit.count({ where: { status: "pending" } }),
+        db.unit.count({ where: { status: { in: ["labeled", "reviewed"] } } }),
+        db.unit.count({ where: { status: "reviewed" } }),
+      ]);
 
     // Running a pipeline is healthy activity; only fail/down/pending backlog → degraded
     let status: "healthy" | "degraded" | "down" = "healthy";
-    if (failedJobs > 0 || pendingUnits > totalUnits * 0.5) status = "degraded";
+    if (failedJobs > 0 || (totalUnits > 0 && pendingUnits > totalUnits * 0.5)) status = "degraded";
 
     return NextResponse.json({
       status,
-      jobs: jobs.length,
+      jobs,
       activeJobs,
       totalUnits,
       pendingUnits,
       labeledUnits,
-      reviewedUnits: units.filter((u) => u.status === "reviewed").length,
+      reviewedUnits,
       agentsAvailable: 9,
       dbConnected: true,
-      skipLlm: process.env.SKIP_LLM === "1",
-      demoDisagree: process.env.DEMO_DISAGREE === "1",
     });
   } catch {
     // Always 200 so clients can render a "down" state instead of spinning forever
